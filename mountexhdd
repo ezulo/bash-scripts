@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export VAR=`sudo blkid | grep 900061ca-01 | awk '{print $1}'`
+DISC=${VAR::-1}
+sudo mount $DISC /home/eduardo/ExHDD/
