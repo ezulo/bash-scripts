@@ -1,0 +1,166 @@
+#!/bin/bash 
+#goal:
+#interface with id3 for music storage, bookkeeping
+#usage: musec [directory] {OPTIONS} 
+#options:
+#
+#  pre-processing:
+#    if option is not specified, current id3 tags will be used
+#
+#    -a / --artist [artist]
+#        change artist name
+#    -A / --album [album] 
+#        change album name
+#    -g / --genre [genre]
+#        change genre
+#    -y / --year [year]
+#        change year
+#    -c / --comment [comment
+#        change comment
+#    
+#  post-processing:  
+#    all options pertaining to file storage
+#
+#    -d / --dir [destination]
+#        specify destination music library root folder (e.g. ~/Music)
+#    -p / --pattern [pattern]
+#        specify storage pattern (e.g. /a/A/ for /{album}/{artist}/*.mp3)
+#        multiple patterns can be specified
+#    -f / --filter [ext1, ext2...]
+#        filter any file extensions (e.g. m4a, jpg, txt, etc)
+#        enter 'img' for generic image
+#        we'll start with one arg, later add support for many
+#    
+
+pwd="$PWD"
+
+while [ "$1" != "" ]; do
+  param=`echo $1 | awk -F= '{print $1}'`
+  case $param in
+    -a|--artist)
+      shift
+      artist=$1
+      ;;
+    -A|--album)
+      shift
+      album=$1
+      ;;
+    -g|--genre)
+      shift
+      genre=$1
+      ;;
+    -y|--year)
+      shift
+      year=$1
+      ;;
+    -c|--comment)
+      shift
+      comment=$1
+      ;;
+    -p|--path)
+      shift
+      from_dir=$(readlink -f $1)
+      ;;
+    -d|--dest)
+      shift
+      dest_dir=$(readlink -f $1)
+      ;;
+    -e|--expression)
+      shift
+      expression=$1
+      ;;
+    -f|--filter)
+      shift
+      filter=$1
+      ;;
+  esac
+  shift
+done
+
+#check for breaking cases
+
+if [ -z $dest_dir ]
+then
+  echo "Destination directory (-d|--dest) required but not provided."
+  exit 1
+fi
+
+if [ ! -d $from_dir ]
+  echo "Location of files (-p|--path) does not exist:" $from_dir
+  exit 1
+
+#check optional field(s)
+
+if [ -z $from_dir ]
+then
+  echo "Location of files not specified. Assuming working directory:" $PWD
+  $from_dir="$PWD"
+
+if [ ! -d "$dest_dir" ]; then
+  echo "Destination directory (-d|--dir) $dest_dir does not exist"
+  exit 1
+fi
+
+if [ -z "$expression" ]
+then
+  echo No expression selected, using default "{artist}/{album}/{track} - {title}.{ext}"
+  pattern="{artist}/{album}/{track} - {title}.{ext}"
+else
+  echo "Expression:" $expression
+fi
+
+#traverse every mp3 file (starting out)
+IFS=$'\n'
+set -f
+for f in (find "$from_dir" -name "*.mp3")
+do
+  #now we need file extension
+  ext="${f##*.}"
+  #next we need to resolve unspecified tags
+  #title, artist, album, year, comment, track
+
+  #first fetch id3 output
+  i=1
+  id3 -l $f | while read line
+  do
+    id3arr[ $1 ]="$line"
+    (( i++ ))
+  done
+
+  #extract values
+  artist_default=`echo ${id3arr[1]} 
+  `
+  #parse expression into filepath
+  fp=$dest_dir
+  fp=${fp/\{artist\}/$artist}
+  fp=${fp/\{album\}/$album}
+  fp=${fp/\{track\}/$track}
+  fp=${fp/\{title\}/$title}
+  fp=${fp/\{ext\}/$ext}
+  fp=${fp/\{genre\}/$genre}
+  #if tags are specified, reapply them
+  #artist, album, genre, year, comment
+  $cmd_string="id3 $f"
+  if [ ! -z $artist ] 
+  then 
+    $cmd_string=`echo $cmd_string "-a" $artist`
+  fi
+  if [ ! -z $album ] 
+  then 
+    $cmd_string=`echo $cmd_string "-A" $album`
+  fi
+  if [ ! -z $genre ] 
+  then 
+    $cmd_string=`echo $cmd_string "-g" $genre`
+  fi
+  if [ ! -z $year ] 
+  then 
+    $cmd_string=`echo $cmd_string "-y" $year`
+  fi
+  if [ ! -z $comment ] 
+  then 
+    $cmd_string=`echo $cmd_string "-c" $album`
+  fi
+done
+unset IFS
+set +f

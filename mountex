@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#UUID is hard coded
+UUID='900061ca-01'
+
+echo "Looking for drive with PARTUUID" $UUID
+
+VAR=`sudo blkid | grep $UUID | awk '{print $1}'`
+if [ -z $VAR ]
+then
+  echo "Hard drive not found in blkid. Is it inserted?"
+  exit 1
+else
+  DISC=${VAR::-1}
+  MOUNT=`cat /proc/self/mounts | grep $DISC | awk '{print $1}'`
+  if [ -z $MOUNT ]
+  then
+    #mount HDD
+    sudo mount $DISC $HOME/ExHDD/
+    echo "Hard drive" $DISC "successfully mounted."
+  else
+    echo "Hard drive" $DISC "already mounted."
+  fi
+fi
+
