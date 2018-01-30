@@ -2,10 +2,8 @@
 
 #UUID is hard coded
 UUID='900061ca-01'
-
-echo "Looking for drive with PARTUUID" $UUID
-
 VAR=`sudo blkid | grep $UUID | awk '{print $1}'`
+echo "Looking for drive with PARTUUID" $UUID
 if [ -z $VAR ]
 then
   echo "Hard drive not found in blkid. Is it inserted?"

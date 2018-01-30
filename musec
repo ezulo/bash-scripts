@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/ben/bash 
 #goal:
 #interface with id3 for music storage, bookkeeping
 #usage: musec [directory] {OPTIONS} 
@@ -34,6 +34,7 @@
 
 pwd="$PWD"
 
+##ARGUMENTS
 while [ "$1" != "" ]; do
   param=`echo $1 | awk -F= '{print $1}'`
   case $param in
@@ -77,8 +78,7 @@ while [ "$1" != "" ]; do
   shift
 done
 
-#check for breaking cases
-
+##INPUT VALIDATION
 if [ -z $dest_dir ]
 then
   echo "Destination directory (-d|--dest) required but not provided."
@@ -109,27 +109,49 @@ else
   echo "Expression:" $expression
 fi
 
-#traverse every mp3 file (starting out)
+##THE PROGRAM
 IFS=$'\n'
 set -f
-for f in (find "$from_dir" -name "*.mp3")
+for f in `find "$from_dir" -name "*.mp3"`
 do
+  #first convert from id3v1 to id3v2
+  id3v2 -C "$f"
   #now we need file extension
   ext="${f##*.}"
   #next we need to resolve unspecified tags
   #title, artist, album, year, comment, track
 
-  #first fetch id3 output
-  i=1
-  id3 -l $f | while read line
-  do
-    id3arr[ $1 ]="$line"
-    (( i++ ))
-  done
+  ##PARSING DEFAULTS (IF USER DID NOT PROVIDE TAG
+  #run the id3 list command to get default values
+  id3v2props=`id3v2 -R "$f"`
+  perlfilter="perl -ne 'if (/.*\:\s+(.*)/) {print \$1}'"
 
-  #extract values
-  artist_default=`echo ${id3arr[1]} 
-  `
+  #artist
+  if [ -z $artist ]
+  then
+    artist=`$id3v2props | grep TPE1 | $perlfilter`
+  fi
+  #album
+  if [ -z $album ]
+  then
+    album=`$id3v2props | grep TALB | $perlfilter`
+  fi
+  #genre
+  if [ -z $genre ]
+  then
+    genre=`$id3v2props | grep TCON | $perlfilter`
+  fi
+  #year
+  if [ -z $year ]
+  then
+    year=`$id3v2props | grep TYER | $perlfilter`
+  fi
+  #comment
+  if [ -z $comment ]
+  then
+    comment=`$id3v2props | grep COMM | $perlfilter`
+  fi
+
   #parse expression into filepath
   fp=$dest_dir
   fp=${fp/\{artist\}/$artist}
@@ -140,27 +162,7 @@ do
   fp=${fp/\{genre\}/$genre}
   #if tags are specified, reapply them
   #artist, album, genre, year, comment
-  $cmd_string="id3 $f"
-  if [ ! -z $artist ] 
-  then 
-    $cmd_string=`echo $cmd_string "-a" $artist`
-  fi
-  if [ ! -z $album ] 
-  then 
-    $cmd_string=`echo $cmd_string "-A" $album`
-  fi
-  if [ ! -z $genre ] 
-  then 
-    $cmd_string=`echo $cmd_string "-g" $genre`
-  fi
-  if [ ! -z $year ] 
-  then 
-    $cmd_string=`echo $cmd_string "-y" $year`
-  fi
-  if [ ! -z $comment ] 
-  then 
-    $cmd_string=`echo $cmd_string "-c" $album`
-  fi
+  $cmd_string="id3v2" "-a" $artist "-A" $album "-g" $genre "-y" $year "-c" $comment
 done
 unset IFS
 set +f
