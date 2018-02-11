@@ -1,5 +1,8 @@
-#!/ben/bash 
-#goal:
+#!/bin/bash 
+
+version="0.1.0"
+
+##README
 #interface with id3 for music storage, bookkeeping
 #usage: musec [directory] {OPTIONS} 
 #options:
@@ -32,79 +35,97 @@
 #        we'll start with one arg, later add support for many
 #    
 
-pwd="$PWD"
-
 ##ARGUMENTS
 while [ "$1" != "" ]; do
   param=`echo $1 | awk -F= '{print $1}'`
   case $param in
+    -v|--version)
+      shift
+      version_flag=true
+      ;;
     -a|--artist)
       shift
-      artist=$1
+      artist="$1"
       ;;
     -A|--album)
       shift
-      album=$1
+      album="$1"
       ;;
     -g|--genre)
       shift
-      genre=$1
+      genre="$1"
       ;;
     -y|--year)
       shift
-      year=$1
+      year="$1"
       ;;
     -c|--comment)
       shift
-      comment=$1
+      comment="$1"
       ;;
     -p|--path)
       shift
-      from_dir=$(readlink -f $1)
+      from_dir="$(readlink -f "$1")"
       ;;
     -d|--dest)
       shift
-      dest_dir=$(readlink -f $1)
+      dest_dir="$(readlink -f "$1")"
       ;;
     -e|--expression)
       shift
-      expression=$1
+      expression="$1"
       ;;
     -f|--filter)
       shift
-      filter=$1
+      filter="$1"
       ;;
   esac
   shift
 done
 
-##INPUT VALIDATION
-if [ -z $dest_dir ]
+if [ ! -z $version_flag ]
 then
-  echo "Destination directory (-d|--dest) required but not provided."
+  echo "MuSec Version $version for Unix systems"
+  echo "Written in Bash by Ed (http://github.com/ezulo)"
   exit 1
 fi
 
-if [ ! -d $from_dir ]
-  echo "Location of files (-p|--path) does not exist:" $from_dir
+##INPUT VALIDATION
+pwd="$PWD"
+if [ -z "$dest_dir" ]
+then
+  echo "ERROR: Destination directory (-d|--dest) required to save files."
   exit 1
+else
+  if [ ! -d "$dest_dir" ]
+  then
+    echo "Destination directory (-d|--dir) $dest_dir does not exist"
+    exit 1
+  fi
+fi
 
 #check optional field(s)
-
-if [ -z $from_dir ]
+if [ -z "$from_dir" ]
 then
-  echo "Location of files not specified. Assuming working directory:" $PWD
-  $from_dir="$PWD"
-
-if [ ! -d "$dest_dir" ]; then
-  echo "Destination directory (-d|--dir) $dest_dir does not exist"
-  exit 1
+  echo ""
+  echo "WARNING: Path to files (-p|--path) unrecognized for unspecified."
+  echo "  Assuming working directory:" $PWD
+  echo ""
+  from_dir="$PWD"
+else
+  if [ ! -d "$from_dir" ]
+  then
+    echo "Location of files (-p|--path) does not exist:" $from_dir
+    exit 1
+  fi
 fi
 
 if [ -z "$expression" ]
 then
-  echo No expression selected, using default "{artist}/{album}/{track} - {title}.{ext}"
-  pattern="{artist}/{album}/{track} - {title}.{ext}"
+  echo "WARNING: No expression (-e|--expression) specified." 
+  echo "  Using default \"{artist}/{album}/{track} - {title}.{ext}\""
+  echo ""
+  expression="{artist}/{album}/{track} - {title}.{ext}"
 else
   echo "Expression:" $expression
 fi
@@ -112,57 +133,97 @@ fi
 ##THE PROGRAM
 IFS=$'\n'
 set -f
+#we'll only use mp3s for now
 for f in `find "$from_dir" -name "*.mp3"`
 do
   #first convert from id3v1 to id3v2
-  id3v2 -C "$f"
+  #id3v2 -C "$f"
   #now we need file extension
   ext="${f##*.}"
   #next we need to resolve unspecified tags
   #title, artist, album, year, comment, track
 
-  ##PARSING DEFAULTS (IF USER DID NOT PROVIDE TAG
+  ##PARSING DEFAULTS (IF USER DID NOT PROVIDE TAG)
   #run the id3 list command to get default values
   id3v2props=`id3v2 -R "$f"`
-  perlfilter="perl -ne 'if (/.*\:\s+(.*)/) {print \$1}'"
+  metadatafilter="perl -ne 'if (/.*\:\s+(.*)/) {print \$1}'"
+  filenamefilter="perl -ne 'if (/.*\/(.*)/) {print \$1}'"
+  parentdifilter="perl -ne 'if (/(.*)\/.*/) {print \$1}'"
+  
+  cmd_string="id3v2"
 
   #artist
   if [ -z $artist ]
   then
-    artist=`$id3v2props | grep TPE1 | $perlfilter`
+    artist=`echo "$id3v2props" | grep TPE1 | eval $metadatafilter`
+  else
+    cmd_string="$cmd_string -a \"${artist}\""
   fi
   #album
   if [ -z $album ]
   then
-    album=`$id3v2props | grep TALB | $perlfilter`
+    album=`echo "$id3v2props" | grep TALB | eval $metadatafilter`
+  else
+    cmd_string="$cmd_string -A \"${album}\""
   fi
   #genre
   if [ -z $genre ]
   then
-    genre=`$id3v2props | grep TCON | $perlfilter`
+    genre=`echo "$id3v2props" | grep TCON | eval $metadatafilter`
+  else
+    cmd_string="$cmd_string -g \"${genre}\""
   fi
   #year
   if [ -z $year ]
   then
-    year=`$id3v2props | grep TYER | $perlfilter`
+    year=`echo "$id3v2props" | grep TYER | eval $metadatafilter`
+  else
+    cmd_string="$cmd_string -y \"${year}\""
   fi
   #comment
   if [ -z $comment ]
   then
-    comment=`$id3v2props | grep COMM | $perlfilter`
+    comment=`echo "$id3v2props" | grep COMM | eval $metadatafilter`
+  else
+    cmd_string="$cmd_string -c \"${comment}\""
   fi
+  #stuff the script doesn't cover
+  title=`echo "$id3v2props" | grep TIT2 | eval $metadatafilter`
+
+  #for now just format track to cover double digits...
+  #might want to add funcionality to customize padded zeroes later
+  track=`echo "$id3v2props" | grep TRCK | eval $metadatafilter`
+  track=`printf "%02d" $track`
 
   #parse expression into filepath
-  fp=$dest_dir
-  fp=${fp/\{artist\}/$artist}
-  fp=${fp/\{album\}/$album}
-  fp=${fp/\{track\}/$track}
-  fp=${fp/\{title\}/$title}
-  fp=${fp/\{ext\}/$ext}
-  fp=${fp/\{genre\}/$genre}
-  #if tags are specified, reapply them
-  #artist, album, genre, year, comment
-  $cmd_string="id3v2" "-a" $artist "-A" $album "-g" $genre "-y" $year "-c" $comment
+  fp="$dest_dir/$expression"
+  fp=${fp/\{artist\}/${artist}}
+  fp=${fp/\{album\}/${album}}
+  fp=${fp/\{track\}/${track}}
+  fp=${fp/\{title\}/${title}}
+  fp=${fp/\{ext\}/${ext}}
+  fp=${fp/\{genre\}/${genre}}
+  fp="$fp"
+  fpparent=`echo "$fp" | eval $parentdifilter`
+  mkdir -p $fpparent
+  cp -f $f $fp
+
+  if [ "$cmd_string" == "id3v2" ]
+  then
+    cmd_string=""
+  else
+    cmd_string="$cmd_string \"$fp\""
+  fi
+
+  #execute
+  #echo "I parsed this file path: ${fp}"
+  #echo "I built this command string: $cmd_string"
+  #create parent directory for file to save...
+  eval $cmd_string
+  #echo $cmd_string
+  fn=`echo $f | eval $filenamefilter`
+  echo ""
+  echo "Saving file ... $fn -> $fp"
 done
 unset IFS
 set +f
