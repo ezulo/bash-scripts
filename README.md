@@ -1,7 +1,8 @@
 # Scripts
 
 ## Getting Started
-Add this directory to your $PATH to enable user scripts.
+Add this directory to your $PATH to enable user scripts. Reading both this page
+and the script contents is recommended before use. Edits are encouraged.
 
 ## Theming
 This supports (or will support) basic theme functionality for:

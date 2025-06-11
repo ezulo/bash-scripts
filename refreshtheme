@@ -3,7 +3,7 @@
 # Get the theme, just in case the shell missed it
 THEME="$(cat $THEME_DIR/current_theme)"
 
-# Hyprpaper (set random pape per monitor)
+# Hyprpaper (set random background per monitor)
 WALLPAPER_DIR="$THEME_DIR/$THEME/wallpapers"
 MONITORS=$(hyprctl monitors -j | jq -r '.[] | .name')
 for MONITOR in $MONITORS; do
@@ -11,7 +11,7 @@ for MONITOR in $MONITORS; do
 	hyprctl hyprpaper reload "$MONITOR","$WALLPAPER" > /dev/null 2>&1
 done
 
-# Kitty
+# Set Kitty theme and refresh all instances of Kitty
 if test -f $THEME_DIR/$THEME/colors; then
 	ln -sf $THEME_DIR/$THEME/colors $KITTY_CONFIG_DIRECTORY/current-theme.conf
 else

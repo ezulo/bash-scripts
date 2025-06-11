@@ -1,7 +1,13 @@
 #!/bin/bash
 
-available_themes="$(ls -1d $THEME_DIR*/ | sed -e 's/\///')"
+# Error if argument is missing
+if [ $# -eq 0 ]; then
+	echo "No argument supplied."
+	exit 1
+fi
 
+# A function to ensure the argument is an available theme
+available_themes="$(ls -1d $THEME_DIR*/ | sed -e 's/\///')"
 check_opt() {
 	status=1
 	for theme in $available_themes; do
@@ -11,11 +17,6 @@ check_opt() {
 	done
 	echo $status
 }
-
-if [ $# -eq 0 ]; then
-	echo "No argument supplied."
-	exit 1
-fi
 
 if [ $(check_opt $1) == 0 ]; then
 	echo "$1" > "$THEME_DIR/current_theme"
