@@ -23,7 +23,7 @@ if [ $(check_opt $1) == 0 ]; then
 	export THEME=$1
 	echo "Theme changed to: $1"
 	# TODO: add a --no-refresh option
-	bash -c /home/eduardo/.local/bin/refreshtheme
+	bash -c $HOME/.config/scripts/refreshtheme
 	exit 0
 else
 	echo "Invalid argument"
