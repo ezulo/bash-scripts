@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# Error if argument is missing
+if [ $# -eq 0 ]; then
+	echo "No arguments supplied."
+	exit 1
+fi
+COMMAND=$1
+ARG=$2
+
+# Get theme data
+#THEME="$(cat $THEME_DIR/current-theme > /dev/null 2>&1)"
+THEME="$(cat $THEME_DIR/current-theme)"
+available_themes="$(ls -1d $THEME_DIR/*/ | sed -e 's/\///')"
+
+# Helper function to check args against available themes
+check_opt() {
+	status=1
+	for theme in $available_themes; do
+		if [ "$1" = $(basename "$theme") ]; then
+			status=0
+		fi
+	done
+	echo $status
+}
+
+# Helper function to print available themes
+print_available_themes() {
+	echo "Choose from the following themes:" 
+	echo "-----------------"
+	for theme in $available_themes; do
+		echo "$(basename $theme)"
+	done
+	echo "-----------------"
+}
+
+case "$COMMAND" in
+	"set")
+		THEME_NEW=$ARG
+		if [ $(check_opt $THEME_NEW) != 0 ]; then
+			echo "Invalid argument."
+			print_available_themes
+			exit 1
+		fi
+		THEME=$THEME_NEW
+		echo "$THEME" > "$THEME_DIR/current-theme"
+		echo "Theme successfully changed to: $THEME"
+		;;&
+	"set" | "update")
+		# Hyprpaper (set random background per monitor)
+		WALLPAPER_DIR="$THEME_DIR/$THEME/wallpapers"
+		MONITORS=$(hyprctl monitors -j | jq -r '.[] | .name')
+		for MONITOR in $MONITORS; do
+			WALLPAPER=$(find "$WALLPAPER_DIR" -type f | shuf -n 1)
+			hyprctl hyprpaper reload "$MONITOR","$WALLPAPER" > /dev/null 2>&1
+		done
+		# Set kitty theme if colors file is present, or revert to defaults.
+		if test -f $THEME_DIR/$THEME/colors; then
+			ln -sf $THEME_DIR/$THEME/colors $KITTY_CONFIG_DIRECTORY/current-theme.conf
+		else
+			rm -f $KITTY_CONFIG_DIRECTORY/current-theme.conf
+		fi
+		# Refresh kitty.
+		kill -SIGUSR1 $(pgrep kitty)
+		echo "Theme successfully updated ($THEME)"
+		;;
+	*)
+		echo "Unknown command: $COMMAND"
+		;;
+esac
+
