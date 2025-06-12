@@ -41,8 +41,7 @@ directory (e.g. `$HOME/themes`)
 
 The script is responsible for changing and applying themes. It has two options:
 
-- `theme <set> <theme_name>`: changes the theme
-- `theme <update>`: updates theme elements
-
-Setting a new theme will also invoke an update.
+- `theme <set> <theme_name>`: changes the theme, also performs a `reload`
+- `theme <get>`: gets the current theme name
+- `theme <reload>`: reloads theme elements + config files
 
