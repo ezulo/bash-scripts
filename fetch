@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-
+THEME=$(cat $THEME_DIR/current-theme)
 if [ -f $THEME_DIR/$THEME/fetch-logo.png ]; then
 	echo -e "\n" # Workaround for spacing issue
 	fastfetch \
