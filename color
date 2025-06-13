@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+# This script pulls color values out of the current theme's `scheme.json`
+# Use: `$ color <color_key>`
+# `color_key` can be the following:
+# * `color[0-15]` (resolves JSON ["colors"].color[0-15], with colored output)
+# * `foreground|background|...etc` (resolves any key under JSON ["special"])
+
+# `THEME` is required, as is a scheme.json for that theme
+if [ -z $THEME ]; then
+    >&2 echo "No theme detected. Set 'THEME' environment var to your theme name."
+    exit 1
+fi
+SCHEME_JSON="$THEME_DIR/$THEME/scheme.json"
+if [ ! -f $SCHEME_JSON ]; then
+    >&2 echo "scheme.json not found at $THEME_DIR/$THEME"
+    >&2 echo "Does this theme not have a color scheme defined?"
+    exit 1
+fi
+
+QUERY=$1
+
+# Helper function to add color to output
+# To disable, just change line 42 to `echo $COLOR`
+format_out() {
+    # $1 is query string, #2 is color code (0-15)
+    PREFIX=$(($2 / 8))
+    SUFFIX=$(($2 % 8 + 30))
+    COL="\\033[${PREFIX};${SUFFIX}m"
+    NOCOL='\033[0m'
+    printf "${COL}$1${NOCOL}"
+}
+
+case $QUERY in
+    color*)
+        COLOR_CODE=$(printf '%s\n' "${QUERY#*color}")
+        if [ $COLOR_CODE -gt 15 ] || [ $COLOR_CODE -lt 0 ]; then
+            >&2 echo "Only numeric colors 0-15 are valid."
+            exit 1
+        fi
+		COLOR=$(jq -r .[\"colors\"].$QUERY $SCHEME_JSON)
+        echo $(format_out $COLOR $COLOR_CODE)
+        ;;
+    *)
+        COLOR=$(jq -r .[\"special\"].$QUERY $SCHEME_JSON)
+        if [ "$COLOR" == "null" ]; then
+            >&2 echo "Color not found: $COLOR"
+            exit 1; 
+        fi
+        echo $COLOR
+        ;;
+esac
+
