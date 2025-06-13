@@ -19,9 +19,9 @@ if [ ! -f $SCHEME_JSON ]; then
 fi
 
 QUERY=$1
+NOFORMAT=$2
 
 # Helper function to add color to output
-# To disable, just change line 42 to `echo $COLOR`
 format_out() {
     # $1 is query string, #2 is color code (0-15)
     PREFIX=$(($2 / 8))
@@ -39,7 +39,11 @@ case $QUERY in
             exit 1
         fi
 		COLOR=$(jq -r .[\"colors\"].$QUERY $SCHEME_JSON)
-        echo $(format_out $COLOR $COLOR_CODE)
+        if [ "$2" == "noformat" ]; then
+            echo $COLOR
+        else
+            echo $(format_out $COLOR $COLOR_CODE)
+        fi
         ;;
     *)
         COLOR=$(jq -r .[\"special\"].$QUERY $SCHEME_JSON)
