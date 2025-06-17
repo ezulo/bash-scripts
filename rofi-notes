@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -e
+
+HYPR_TERMINAL=${HYPR_TERMINAL:-kitty}
+NOTES_DIR=${NOTES_DIR:-~/notes}
+
+CREATE_NEW="New..."
+LS_NOTES=$(ls --color=none -1 "$NOTES_DIR")
+OPT=$(echo -e "$CREATE_NEW\n$LS_NOTES" | rofi -dmenu -p "Notes")
+NOW=$(date +"%Y-%m-%dT%H:%M:%S%z")
+echo $HYPR_TERMINAL
+echo $NOTES_DIR
+echo $NOW
+echo $LS_NOTES
+echo $OPT
+
+FILE="$OPT"
+
+# Default (create file with timestamp)
+[[ "$OPT" == "$CREATE_NEW" ]] && FILE=$NOW.md
+
+# Append md extension if missing
+[[ ! "$FILE" =~ \.md$ ]] && FILE=$FILE.md
+
+$HYPR_TERMINAL nvim $NOTES_DIR/$FILE
+
