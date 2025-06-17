@@ -5,13 +5,16 @@
 # `color_key` can be the following:
 # * `color[0-15]` (resolves JSON ["colors"].color[0-15], with colored output)
 # * `foreground|background|...etc` (resolves any key under JSON ["special"])
+#
+# A second output "noformat" can be specified to omit newlines and coloration:
+# `$ color <color_key> noformat`
 
 # `THEME` is required, as is a scheme.json for that theme
 if [ -z $THEME ]; then
     >&2 echo "No theme detected. Set 'THEME' environment var to your theme name."
     exit 1
 fi
-SCHEME_JSON="$THEME_DIR/$THEME/scheme.json"
+SCHEME_JSON="$THEME_DIR/$THEME/colors.json"
 if [ ! -f $SCHEME_JSON ]; then
     >&2 echo "scheme.json not found at $THEME_DIR/$THEME"
     >&2 echo "Does this theme not have a color scheme defined?"
@@ -40,7 +43,8 @@ case $QUERY in
         fi
 		COLOR=$(jq -r .[\"colors\"].$QUERY $SCHEME_JSON)
         if [ "$2" == "noformat" ]; then
-            echo $COLOR
+            # For use in scripts, mostly. We omit the newline and coloration
+            echo -n $COLOR
         else
             echo $(format_out $COLOR $COLOR_CODE)
         fi
@@ -51,7 +55,11 @@ case $QUERY in
             >&2 echo "Color not found: $COLOR"
             exit 1; 
         fi
-        echo $COLOR
+        if [ "$2" == "noformat" ]; then
+            echo -n $COLOR
+        else
+            echo $COLOR
+        fi
         ;;
 esac
 
