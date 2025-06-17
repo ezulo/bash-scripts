@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+SCREENSHOT_DIRECTORY=$HOME/pictures/screenshot
+NOW=$(date +"%Y-%m-%dT%H:%M:%S%z")
+
+hyprshot -m region -o $SCREENSHOT_DIRECTORY/$NOW.png
+
