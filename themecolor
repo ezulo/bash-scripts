@@ -14,9 +14,6 @@
 # when background and color are too similar, we color the background instead.
 L_DELTA_THRESHOLD=70
 
-# Global
-BG_L=
-
 THEME=$(cat $THEME_DIR/current-theme)
 if [ -z $THEME ]; then
     >&2 echo "No theme detected. Set 'THEME' environment var to your theme name."
@@ -29,6 +26,7 @@ if [ ! -f $SCHEME_JSON ]; then
     exit 1
 fi
 
+BG_L=
 QUERY=$1
 NOFORMAT=$2
 
@@ -66,7 +64,6 @@ BG_HEX="$(jq -r .[\"special\"].background $SCHEME_JSON)"
 BG_R=$((16#${BG_HEX:1:2}))
 BG_G=$((16#${BG_HEX:3:2}))
 BG_B=$((16#${BG_HEX:5:2}))
-BG_L="$(rgb_luminance $BG_R $BG_G $BG_B)"
 case $QUERY in
     color*)
         COLOR_CODE=$(printf '%s\n' "${QUERY#*color}")
@@ -78,9 +75,15 @@ case $QUERY in
         if [ "$2" == "noformat" ]; then
             # For use in scripts, mostly. We omit the newline and coloration
             echo -n $COLOR
-        else
-            echo $(format_out_hex $COLOR)
+            exit 0
         fi
+        if [ ! command -v bc > /dev/null 2>&1 ]; then
+            >&2 echo "bc is not installed. could not colorize text."
+            echo -n $COLOR
+            exit 0
+        fi
+        BG_L="$(rgb_luminance $BG_R $BG_G $BG_B)"
+        echo $(format_out_hex $COLOR)
         ;;
     *)
         COLOR=$(jq -r .[\"special\"].$QUERY $SCHEME_JSON)
