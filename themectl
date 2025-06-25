@@ -1,0 +1,346 @@
+#!/usr/bin/env bash
+
+# Options
+IFS='
+'
+set -e
+
+# Const
+ID="themectl"
+SEP=$(perl -E 'say "-" x 35')
+
+# Env (init if not set)
+THEME_DIR=${THEME_DIR:-"$HOME/.config/theme"}
+KITTY_CONFIG_DIRECTORY="${KITTY_CONFIG_DIRECTORY:-$XDG_CONFIG_HOME/kitty}"
+WAYBAR_CONFIG_DIRECTORY="${WAYBAR_CONFIG_DIRECTORY:-$XDG_CONFIG_HOME/waybar}"
+HYPR_CONFIG_DIRECTORY="${HYPR_CONFIG_DIRECTORY:-$XDG_CONFIG_HOME/hypr}"
+ROFI_CONFIG_DIRECTORY="${ROFI_CONFIG_DIRECTORY:-$XDG_CONFIG_HOME/rofi}"
+DUNST_CONFIG_DIRECTORY="${DUNST_CONFIG_DIRECTORY:-$XDG_CONFIG_HOME/dunst}"
+
+# Globals
+THEME_CONFIG_HYPRLAND=
+THEME_CONFIG_WAYBAR_RULES=
+THEME_CONFIG_ROFI_RULES=
+THEME_CONFIG_DUNST_DIRECTORY=
+COLORS_JSON=
+FILES_OUT=
+
+# Error if argument is missing (when calling from the shell)
+if [ $# -eq 0 ]; then
+	echo "No arguments supplied."
+	exit 1
+fi
+COMMAND=$1
+ARG=$2
+
+# Get theme data
+THEME="$(cat $THEME_DIR/current-theme)"
+AVAILABLE_THEMES="$(ls -1d $THEME_DIR/*/ | sed -e 's/\///')"
+
+check_opt() {
+	status=1
+	for theme in $AVAILABLE_THEMES; do
+		if [ "$1" = $(basename "$theme") ]; then
+			status=0
+		fi
+	done
+	echo $status
+}
+
+print_available_themes() {
+	echo "Choose from the following themes:" 
+	echo "-----------------"
+	for theme in $AVAILABLE_THEMES; do
+		echo "$(basename $theme)"
+	done
+	echo "-----------------"
+}
+
+notify_warn() {
+    notify-send --urgency=normal "$ID:$1:WARN" "$2"
+}
+
+notify_log() {
+    notify-send --urgency=low "$ID:$1" "$2"
+}
+
+commit_file() {
+    SRC=$1
+    DST=$2
+    cp "$SRC" "$DST"
+    [[ "$DST" =~ ^"$HOME"(/|$) ]] && DST=~${DST#$HOME}
+    FILES_OUT="${FILES_OUT}$DST\n"
+}
+
+clear_files() {
+    for file in "$@"; do
+        echo -n "" > $file
+    done
+}
+
+colors_to_css() {
+    OUT=$1
+    PREFIX="@define-color " # Before color key
+    DELIMITER=" " # After color key, before color value
+    SUFFIX=";" # After color value
+    if [ "$2" == "rasi" ]; then
+        PREFIX="\t"
+        DELIMITER=":"
+        SUFFIX=";"
+    fi
+    COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
+    if [ "$COLORBG" != "null" ]; then
+        echo -e "${PREFIX}colorbg${DELIMITER}${COLORBG}${SUFFIX}" >> "$OUT"
+    fi
+    COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
+    if [ "$COLORFG" != "null" ]; then
+        echo -e "${PREFIX}colorfg${DELIMITER}${COLORFG}${SUFFIX}" >> "$OUT"
+    fi
+    COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
+    if [ "$COLORSELBG" != "null" ]; then
+        echo -e "${PREFIX}colorsbg${DELIMITER}${COLORSELBG}${SUFFIX}" >> "$OUT"
+    fi
+    COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
+    if [ "$COLORSELFG" != "null" ]; then
+        echo -e "${PREFIX}colorsfg${DELIMITER}${COLORSELFG}${SUFFIX}" >> "$OUT"
+    fi
+    for idx in $(seq 0 15); do
+        COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
+        if [ "$COLOR" != "null" ]; then
+            echo -e "${PREFIX}color$idx${DELIMITER}${COLOR}${SUFFIX}" >> "$OUT"
+        fi
+    done
+    echo "" >> "$OUT"
+}
+
+# Output:
+# current-theme.conf (built from colors.json)
+theme_kitty() {
+	TMP="/tmp/kitty_current-theme.conf"
+    OUT="$KITTY_CONFIG_DIRECTORY/current-theme.conf"
+    clear_files "$TMP" "$OUT"
+    if [ ! -f $COLORS_JSON ]; then
+        notify_warn "theme_kitty" \
+            "$COLORS_JSON not found. Ignoring kitty colors."
+        return 0
+    fi
+	echo "" > $TMP
+    COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
+	if [ "$COLORBG" != "null" ]; then
+		echo -e "background\t\t$COLORBG" >> $TMP
+	fi
+	COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
+	if [ "$COLORFG" != "null" ]; then
+		echo -e "foreground\t\t$COLORFG" >> $TMP
+	fi
+	COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
+	if [ "$COLORSELBG" != "null" ]; then
+		echo -e "selection_background\t$COLORSELBG" >> $TMP
+	fi
+	COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
+	if [ "$COLORSELFG" != "null" ]; then
+		echo -e "selection_foreground\t$COLORSELFG" >> $TMP
+	fi
+	COLORCUR=$(jq -r .[\"special\"].cursor $COLORS_JSON);
+	if [ "$COLORCUR" != "null" ]; then
+		echo -e "cursor\t\t\t$COLORCUR" >> $TMP
+	fi
+	for idx in $(seq 0 15); do
+		COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
+		if [ "$COLOR" != "null" ]; then
+			echo -e "color$idx\t\t\t$COLOR" >> $TMP
+		fi
+	done
+    commit_file "$TMP" "$OUT"
+}
+
+# Out:
+# colors.css (waybar CSS color definitions)
+# rules.css (waybar CSS rules)
+theme_waybar() {
+    COLORS_TMP="/tmp/waybar_colors.css"
+    COLORS_OUT="$WAYBAR_CONFIG_DIRECTORY/theme/colors.css"
+    RULES_OUT="$WAYBAR_CONFIG_DIRECTORY/theme/rules.css"
+    clear_files "$COLORS_TMP" "$COLORS_OUT" "$RULES_OUT"
+    if [ -f "$COLORS_JSON" ]; then
+        colors_to_css "$COLORS_TMP"
+        commit_file "$COLORS_TMP" "$COLORS_OUT"
+    else
+		notify_warn "theme_waybar" \
+            "WARN: $COLORS_JSON not found. Ignoring colors."
+    fi
+    if [ -f "$THEME_CONFIG_WAYBAR_RULES" ]; then
+        commit_file "$THEME_CONFIG_WAYBAR_RULES" "$RULES_OUT"
+    else
+		notify_warn "theme_waybar" \
+            "WARN: $THEME_CONFIG_WAYBAR_RULES. Ignoring rules."
+	fi
+}
+
+# Out:
+# theme.conf (hyprland configuration file)
+theme_hyprland() {
+    OUT="$HYPR_CONFIG_DIRECTORY/theme.conf"
+    clear_files "$OUT"
+    if [ ! -f "$THEME_CONFIG_HYPRLAND" ]; then
+        notify_warn "theme_hyprland" \
+            "Not found: $THEME_CONFIG_HYPRLAND. Ignoring theme rules."
+        return
+    fi
+    commit_file "$THEME_CONFIG_HYPRLAND" "$OUT"
+}
+
+# Out:
+# All files under config/dunst
+theme_dunst() {
+    TMP="/tmp/dunstrc"
+    OUT="$DUNST_CONFIG_DIRECTORY/dunstrc"
+    clear_files "$TMP" "$OUT"
+    echo -e "; DO NOT EDIT, WILL BE OVERWRITTEN" > "$TMP"
+    echo -e "; This file was generated by the \`$ID\` script" >> $TMP
+    echo -e "; Edit dunstrc.default instead!\n" >> "$TMP"
+    cat "$DUNST_CONFIG_DIRECTORY/dunstrc.default" >> "$TMP"
+
+    [ ! -d "$THEME_CONFIG_DUNST_DIRECTORY" ] && \
+        [ -z $( ls -A "$THEME_CONFIG_DUNST_DIRECTORY") && \
+        notify_warn "theme_dunst" "No dunst theme files found.\nUsing defaults."
+
+    for INFILE in "$THEME_CONFIG_DUNST_DIRECTORY"/*; do
+        cat "$INFILE" >> "$TMP"
+    done
+    commit_file "$TMP" "$OUT"
+}
+
+# Out:
+# theme.rasi (CSS theme file for rofi)
+# rofi does not need reloading.
+theme_rofi() {
+    COLORS_OUT="$ROFI_CONFIG_DIRECTORY/theme/colors.rasi"
+    RULES_OUT="$ROFI_CONFIG_DIRECTORY/theme/rules.rasi"
+    COLORS_TMP="/tmp/theme_roficolors.rasi"
+    clear_files "$COLORS_OUT" "$COLORS_TMP" "$RULES_OUT"
+    if [ -f "$COLORS_JSON" ]; then
+        echo "* {" > $COLORS_TMP
+        colors_to_css "$COLORS_TMP" "rasi"
+        echo "}" >> $COLORS_TMP
+        commit_file "$COLORS_TMP" "$COLORS_OUT"
+    else
+		notify_warn "theme_rofi" \
+            "WARN: $COLORS_JSON not found. Ignoring colors."
+    fi
+    if [ -f "$THEME_CONFIG_ROFI_RULES" ]; then
+        commit_file "$THEME_CONFIG_ROFI_RULES" "$RULES_OUT"
+    else
+        notify_warn "theme_rofi" \
+            "Not rofi rules file found.\nUsing defaults."
+    fi
+}
+
+reload_kitty() {
+    kill -SIGUSR1 $(pgrep kitty)
+}
+
+reload_waybar() {
+	[[ ! -z $(pgrep -x "waybar") ]] && killall waybar
+	waybar > /dev/null 2>&1 &
+}
+
+reload_hyprpaper() {
+    # Restart if it's in a failed state
+    if ! pgrep -f hyprpaper > /dev/null; then
+        notify_warn "reload_hyprpaper" \
+            "hyprpaper was in a failed / inactive state. Attempting restart."
+        hyprpaper > /dev/null 2>&1 &
+    fi
+	WALLPAPER_DIR="$THEME_DIR/$THEME/wallpapers"
+	MONITORS=$(hyprctl monitors -j | jq -r -r '.[] | .name')
+	echo -n "" > "$HYPR_CONFIG_DIRECTORY/hyprpaper.conf"
+    WALLPAPERS=$(find "$WALLPAPER_DIR" -type f | shuf)
+    i=1
+	for MONITOR in $MONITORS; do
+		WALLPAPER=$(echo "$WALLPAPERS"| head -n $i | tail -n 1)
+		echo "preload = $WALLPAPER" >> "$HYPR_CONFIG_DIRECTORY/hyprpaper.conf"
+		echo "wallpaper = $MONITOR, contain:$WALLPAPER" \
+            >> "$HYPR_CONFIG_DIRECTORY/hyprpaper.conf"
+		hyprctl hyprpaper reload "$MONITOR","$WALLPAPER" &> /dev/null 2>&1
+        i=$(($i+1))
+	done
+}
+
+reload_hyprland() {
+    hyprctl reload > /dev/null 2>&1
+}
+
+reload_dunst() {
+    dunstctl reload
+}
+
+main() {
+    case "$COMMAND" in
+        "set")
+            THEME_NEW=$ARG
+            if [ $(check_opt $THEME_NEW) != 0 ]; then
+                echo "Invalid argument."
+                print_available_themes
+                exit 1
+            fi
+            THEME=$THEME_NEW
+            echo "$THEME" > "$THEME_DIR/current-theme"
+            notify_log "main" "Theme successfully changed to: $THEME"
+            ;;&
+        "set" | "reload")
+            COLORS_JSON="$THEME_DIR/$THEME/colors.json"
+            THEME_CONFIG_DIR="$THEME_DIR/$THEME/config"
+            THEME_CONFIG_HYPRLAND="$THEME_CONFIG_DIR/hyprland/theme.conf"
+            THEME_CONFIG_WAYBAR_RULES="$THEME_CONFIG_DIR/waybar/rules.css"
+            THEME_CONFIG_ROFI_RULES="$THEME_CONFIG_DIR/rofi/theme.rasi"
+            THEME_CONFIG_DUNST_DIRECTORY="$THEME_CONFIG_DIR/dunst"
+            if [ -z $THEME ]; then
+                echo "hit"
+                notify_log "main" "Theme not set. Nothing to do."
+                exit 0
+            fi
+            theme_kitty
+            theme_waybar
+            theme_hyprland
+            theme_rofi
+            # We do this ridiculous thing because we want to use dunst for
+            # output in this script, but also reload it...so we only reload
+            # dunst if its checksum has changed.
+            DUNST_SUM_ORIG=$(sha256sum $DUNST_CONFIG_DIRECTORY/dunstrc)
+            theme_dunst
+            DUNST_SUM_NEW=$(sha256sum $DUNST_CONFIG_DIRECTORY/dunstrc)
+            notify_log "main" "Files written:\n$SEP\n$FILES_OUT$SEP"
+            reload_kitty
+            reload_waybar
+            reload_hyprpaper
+            reload_hyprland
+            notify_log "main" \
+                "$(printf \
+                    "Services reloaded: \n$SEP\n%b\n%b\n%b\n%b\n$SEP" \
+                    "kitty" "waybar" "hyprpaper" "hyprland" \
+                )"
+            if [ "$DUNST_SUM_NEW" != "$DUNST_SUM_ORIG" ]; then
+                notify_warn "main" "$(printf "%b%b"\
+                    "Change to dunst config detected.\n" \
+                    "Waiting for message timeouts to reload..." \
+                )"
+                while [ $(dunstctl "count" "displayed") -gt 0 ]; do
+                    sleep 1
+                done
+                reload_dunst
+                sleep 0.5
+            fi
+            notify_log "main" "Theme reloaded: $THEME"
+            ;;
+        "get")
+            echo $THEME
+            ;;
+        *)
+            echo "Unknown command: $COMMAND"
+            ;;
+    esac
+}
+
+main
+

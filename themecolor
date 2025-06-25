@@ -9,7 +9,15 @@
 # A second output "noformat" can be specified to omit newlines and coloration:
 # `$ color <color_key> noformat`
 
-# `THEME` is required, as is a scheme.json for that theme
+# Luminance Delta Threshold (0 through 255)
+# Delta in luminance between background and color
+# when background and color are too similar, we color the background instead.
+L_DELTA_THRESHOLD=70
+
+# Global
+BG_L=
+
+THEME=$(cat $THEME_DIR/current-theme)
 if [ -z $THEME ]; then
     >&2 echo "No theme detected. Set 'THEME' environment var to your theme name."
     exit 1
@@ -24,16 +32,41 @@ fi
 QUERY=$1
 NOFORMAT=$2
 
-# Helper function to add color to output
-format_out() {
-    # $1 is query string, #2 is color code (0-15)
-    PREFIX=$(($2 / 8))
-    SUFFIX=$(($2 % 8 + 30))
-    COL="\\033[${PREFIX};${SUFFIX}m"
-    NOCOL='\033[0m'
-    printf "${COL}$1${NOCOL}"
+if [[ "$QUERY" =~ [0-9]+ ]]; then
+    QUERY="color${QUERY}"
+fi
+
+rgb_luminance() {
+    EQ="0.2126 * $1 + 0.7152 * $2 + 0.0722 * $3"
+    L=$(echo "$EQ" | bc);
+    printf "%.0f" "$L"
 }
 
+# Helper function to add color to output
+# Also calculates luminance delta with background, and colors background
+# if delta is too small (color would not be visible)
+format_out_hex() {
+    HEX=$1 #e.g. "#012345"
+    R=$((16#"${HEX:1:2}"))
+    G=$((16#"${HEX:3:2}"))
+    B=$((16#"${HEX:5:2}"))
+    L=$(rgb_luminance $R $G $B)
+    COL_FG="\\033[38;2"
+    COL_BG="\\033[48;2"
+    COL_SEQ="${COL_FG};${R};${G};${B}m"
+    COL_CLEAR='\033[0m'
+    L_DELTA=$(echo "$BG_L - $L" | bc)
+    if [ ${L_DELTA#-} -lt $L_DELTA_THRESHOLD ]; then
+        COL_SEQ="${COL_BG};${R};${G};${B}m"
+    fi
+    echo -e "${COL_SEQ}${HEX}${COL_CLEAR}"
+}
+
+BG_HEX="$(jq -r .[\"special\"].background $SCHEME_JSON)"
+BG_R=$((16#${BG_HEX:1:2}))
+BG_G=$((16#${BG_HEX:3:2}))
+BG_B=$((16#${BG_HEX:5:2}))
+BG_L="$(rgb_luminance $BG_R $BG_G $BG_B)"
 case $QUERY in
     color*)
         COLOR_CODE=$(printf '%s\n' "${QUERY#*color}")
@@ -46,7 +79,7 @@ case $QUERY in
             # For use in scripts, mostly. We omit the newline and coloration
             echo -n $COLOR
         else
-            echo $(format_out $COLOR $COLOR_CODE)
+            echo $(format_out_hex $COLOR)
         fi
         ;;
     *)
