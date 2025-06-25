@@ -161,6 +161,11 @@ theme_waybar() {
     COLORS_TMP="/tmp/waybar_colors.css"
     COLORS_OUT="$WAYBAR_CONFIG_DIRECTORY/theme/colors.css"
     RULES_OUT="$WAYBAR_CONFIG_DIRECTORY/theme/rules.css"
+    if [ ! -d "$WAYBAR_CONFIG_DIRECTORY/theme" ]; then
+        notify_warn "theme_waybar" \
+            "Created directory: $WAYBAR_CONFIG_DIRECTORY/theme"
+        mkdir "$WAYBAR_CONFIG_DIRECTORY/theme"
+    fi
     clear_files "$COLORS_TMP" "$COLORS_OUT" "$RULES_OUT"
     if [ -f "$COLORS_JSON" ]; then
         colors_to_css "$COLORS_TMP"
@@ -226,6 +231,9 @@ theme_rofi() {
     COLORS_OUT="$ROFI_CONFIG_DIRECTORY/theme/colors.rasi"
     RULES_OUT="$ROFI_CONFIG_DIRECTORY/theme/rules.rasi"
     COLORS_TMP="/tmp/theme_roficolors.rasi"
+    if [ ! -d "$ROFI_CONFIG_DIRECTORY/theme" ]; then
+        mkdir "$ROFI_CONFIG_DIRECTORY/theme"
+    fi
     clear_files "$COLORS_OUT" "$COLORS_TMP" "$RULES_OUT"
     if [ -f "$COLORS_JSON" ]; then
         echo "* {" > $COLORS_TMP
