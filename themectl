@@ -193,6 +193,10 @@ theme_hyprland() {
 # Out:
 # All files under config/dunst
 theme_dunst() {
+    if [ ! -d "$DUNST_CONFIG_DIRECTORY" ]; then
+        notify_warn "theme_dunst" "Dunst config directory not found. Ignoring."
+        return
+    fi
     TMP="/tmp/dunstrc"
     OUT="$DUNST_CONFIG_DIRECTORY/dunstrc"
     clear_files "$TMP" "$OUT"
@@ -215,6 +219,10 @@ theme_dunst() {
 # theme.rasi (CSS theme file for rofi)
 # rofi does not need reloading.
 theme_rofi() {
+    if [ ! -d "$ROFI_CONFIG_DIRECTORY" ]; then
+        notify_warn "theme_rofi" "Rofi config directory not found. Ignoring."
+        return
+    fi
     COLORS_OUT="$ROFI_CONFIG_DIRECTORY/theme/colors.rasi"
     RULES_OUT="$ROFI_CONFIG_DIRECTORY/theme/rules.rasi"
     COLORS_TMP="/tmp/theme_roficolors.rasi"
@@ -237,16 +245,28 @@ theme_rofi() {
 }
 
 reload_kitty() {
+    # Ignore if command does not exist
+    if ! command -v kitty; then
+        return
+    fi
     kill -SIGUSR1 $(pgrep kitty)
 }
 
 reload_waybar() {
+    # Ignore if command does not exist
+    if ! command -v waybar; then
+        return
+    fi
 	[[ ! -z $(pgrep -x "waybar") ]] && killall waybar
 	waybar > /dev/null 2>&1 &
 }
 
 reload_hyprpaper() {
-    # Restart if it's in a failed state
+    # Ignore if command does not exist
+    if ! command -v hyprpaper; then
+        return
+    fi
+    # Restart if in a failed / inactive state
     if ! pgrep -f hyprpaper > /dev/null; then
         notify_warn "reload_hyprpaper" \
             "hyprpaper was in a failed / inactive state. Attempting restart."
