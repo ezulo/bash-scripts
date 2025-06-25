@@ -2,12 +2,15 @@
 
 set -e
 
+# Const
+ROFI_PROMPT="notes [$USER]"
+
 HYPR_TERMINAL=${HYPR_TERMINAL:-kitty}
 NOTES_DIR=${NOTES_DIR:-~/notes}
 
 CREATE_NEW="New..."
 LS_NOTES=$(ls --color=none -1 "$NOTES_DIR")
-OPT=$(echo -e "$CREATE_NEW\n$LS_NOTES" | rofi -dmenu -p "Notes")
+OPT=$(echo -e "$CREATE_NEW\n$LS_NOTES" | rofi -dmenu -p "$ROFI_PROMPT")
 NOW=$(date +"%Y-%m-%dT%H:%M:%S%z")
 echo $HYPR_TERMINAL
 echo $NOTES_DIR

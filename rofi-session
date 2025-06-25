@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -e
+
+# Const
+ROFI_PROMPT="session [$USER]"
+
+OPTIONS="\
+logout
+lock
+sleep
+shutdown
+reboot"
+
+OPT=$(echo -e "$OPTIONS" | rofi -dmenu -p "$ROFI_PROMPT")
+
+case $OPT in
+    "logout")
+        hyprctl dispatch exit
+        ;;
+    "lock")
+        hyprlock
+        ;;
+    "sleep")
+        notify-send "rofi-session" "sleep not yet implemented..."
+        ;;
+    "shutdown")
+        shutdown 0
+        ;;
+    "reboot")
+        reboot 0
+        ;;
+    *)
+        notify-send "rofi-session" "unrecognized: $OPT"
+esac
+
