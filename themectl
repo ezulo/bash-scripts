@@ -326,6 +326,23 @@ reload_dunst() {
     dunstctl reload
 }
 
+create_theme() {
+    NEW_THEME=$1
+    if [ -z $NEW_THEME ]; then
+        notify_log $FUNCNAME "Theme name missing. Aborted."
+        return 1
+    fi
+    SKEL="${THEME_DIR}/.skeleton"
+    OUT_DIR="${THEME_DIR}/${NEW_THEME}"
+    if [ ! -d "$SKEL" ]; then
+        notify_log $FUNCNAME "Theme skeleton seems to be missing. Aborted."
+        return 1
+    fi
+    cp -r "$SKEL" "$OUT_DIR"
+    notify_log $FUNCNAME "New theme created at ${OUT_DIR}"
+    return 0
+}
+
 main() {
     case "$COMMAND" in
         "set")
@@ -376,6 +393,9 @@ main() {
             ;;
         "get")
             echo $THEME
+            ;;
+        "create")
+            create_theme $ARG
             ;;
         *)
             echo "Unknown command: $COMMAND"
