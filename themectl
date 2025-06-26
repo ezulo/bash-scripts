@@ -327,16 +327,17 @@ reload_hyprpaper() {
     if ! command -v hyprpaper > /dev/null; then
         return 1
     fi
-    # Restart if in a failed / inactive state
+    WALLPAPER_DIR="$THEME_HOME/$THEME/wallpapers"
+    WALLPAPERS=$(find "$WALLPAPER_DIR" -type f | shuf)
+    if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$WALLPAPERS" ]; then
+        killall hyprpaper
+        return 0
+    fi
     if ! pgrep -f hyprpaper > /dev/null; then
-        notify_warn "$FUNCNAME" \
-            "hyprpaper was in a failed / inactive state. Attempting restart."
         hyprpaper > /dev/null 2>&1 &
     fi
-	WALLPAPER_DIR="$THEME_HOME/$THEME/wallpapers"
 	MONITORS=$(hyprctl monitors -j | jq -r -r '.[] | .name')
 	echo -n "" > "$HYPR_CONFIG_DIR/hyprpaper.conf"
-    WALLPAPERS=$(find "$WALLPAPER_DIR" -type f | shuf)
     i=1
 	for MONITOR in $MONITORS; do
 		WALLPAPER=$(echo "$WALLPAPERS"| head -n $i | tail -n 1)
@@ -367,14 +368,12 @@ append_reloaded() {
 
 update_tc_paths() {
     SED_SUBST="s/{THEME}/$THEME/"
-    echo "SED: $SED_SUBST"
     COLORS_JSON="$THEME_HOME/$THEME/colors.json"
     TC_DIR=$(echo "$TC_DIR" | sed "$SED_SUBST")
     TC_HYPRLAND=$(echo "$TC_HYPRLAND" | sed "$SED_SUBST" )
     TC_WAYBAR=$(echo "$TC_WAYBAR" | sed "$SED_SUBST")
     TC_ROFI=$(echo "$TC_ROFI" | sed "$SED_SUBST")
     TC_DUNST=$(echo "$TC_DUNST" | sed "$SED_SUBST")
-    echo "TC_DUNST: $TC_DUNST"
 }
 
 theme_all() {
@@ -452,6 +451,7 @@ clean_all() {
     clean_waybar
     clean_rofi
     clean_dunst
+    clean_kitty
 }
 
 main() {
