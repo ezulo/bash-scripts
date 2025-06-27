@@ -5,30 +5,45 @@
 # `color_key` can be the following:
 # * `color[0-15]` (resolves JSON ["colors"].color[0-15], with colored output)
 # * `foreground|background|...etc` (resolves any key under JSON ["special"])
+# * `all` (prints all colors nicely)
 #
-# A second output "noformat" can be specified to omit newlines and coloration:
-# `$ color <color_key> noformat`
+# A second argument `nocolor` disables coloration:
+# `$ color <color_key> nocolor`
 
-# Luminance Delta Threshold (0 through 255)
-# Delta in luminance between background and color
-# when background and color are too similar, we color the background instead.
+# Luminance Delta Threshold (0 through 255) (default: 70)
+# When the background and color are too similar, we color the output background 
+# instead of the foreground. Decrease this to make this effect more sensitive.
 L_DELTA_THRESHOLD=70
+
+# Space between pretty print inline members
+PRETTY_PRINT_PADDING=5
+
+# Global, don't touch
+BG_L= 
+
+# Arguments
+QUERY=$1
+NOCOL=
+[ "$2" == "nocolor" ] && NOCOL=1
+
+# If "bc" command is not present, we will use NOCOL
+if [ -z $NOCOL ] && [ ! command -v bc > /dev/null 2>&1 ]; then
+    >&2 echo "WARNING: bc is not available. Color output disabled."
+    >&2 echo "To disable: run $ themecolor <query> nocolor"
+    NOCOL=1
+fi
 
 THEME=$(cat $THEME_DIR/current-theme)
 if [ -z $THEME ]; then
     >&2 echo "No theme detected. Set 'THEME' environment var to your theme name."
     exit 1
 fi
-SCHEME_JSON="$THEME_DIR/$THEME/colors.json"
-if [ ! -f $SCHEME_JSON ]; then
+COLORS_JSON="$THEME_DIR/$THEME/colors.json"
+if [ ! -f $COLORS_JSON ]; then
     >&2 echo "scheme.json not found at $THEME_DIR/$THEME"
     >&2 echo "Does this theme not have a color scheme defined?"
     exit 1
 fi
-
-BG_L=
-QUERY=$1
-NOFORMAT=$2
 
 if [[ "$QUERY" =~ [0-9]+ ]]; then
     QUERY="color${QUERY}"
@@ -43,59 +58,149 @@ rgb_luminance() {
 # Helper function to add color to output
 # Also calculates luminance delta with background, and colors background
 # if delta is too small (color would not be visible)
-format_out_hex() {
+colorize_hex() {
     HEX=$1 #e.g. "#012345"
+    HEX_REGEX="^#[0-9|a-f]+$"
+    if [[ ! $HEX =~ $HEX_REGEX ]] || [ $(echo "$HEX" | wc -L) -ne 7 ]; then
+        echo -ne "${HEX}[INVALID]"
+        return 1
+    fi
     R=$((16#"${HEX:1:2}"))
     G=$((16#"${HEX:3:2}"))
     B=$((16#"${HEX:5:2}"))
     L=$(rgb_luminance $R $G $B)
+    L_DELTA=$(echo "$BG_L - $L" | bc)
     COL_FG="\\033[38;2"
     COL_BG="\\033[48;2"
     COL_SEQ="${COL_FG};${R};${G};${B}m"
     COL_CLEAR='\033[0m'
-    L_DELTA=$(echo "$BG_L - $L" | bc)
     if [ ${L_DELTA#-} -lt $L_DELTA_THRESHOLD ]; then
         COL_SEQ="${COL_BG};${R};${G};${B}m"
     fi
-    echo -e "${COL_SEQ}${HEX}${COL_CLEAR}"
+    echo -n "${COL_SEQ}${HEX}${COL_CLEAR}"
 }
 
-BG_HEX="$(jq -r .[\"special\"].background $SCHEME_JSON)"
+print_color_key() {
+    KEY=$1
+    if [ ! -z "$KEY" ]; then
+        echo -n "${KEY}: " # No newline; we want it inline
+    fi
+}
+
+get_color_hex() {
+    QUERY=$1
+    case $QUERY in
+        color*)
+            COLOR_CODE=$(printf '%s\n' "${QUERY#*color}")
+            if [ $COLOR_CODE -gt 15 ] || [ $COLOR_CODE -lt 0 ]; then
+                >&2 echo "Only numeric colors 0-15 are valid."
+                return 1
+            fi
+            COLOR=$(jq -r .[\"colors\"].$QUERY $COLORS_JSON)
+            ;;
+        *)
+            COLOR=$(jq -r .[\"special\"].$QUERY $COLORS_JSON)
+            if [ "$COLOR" == "null" ]; then
+                >&2 echo "Color not found: $COLOR"
+                exit 1; 
+            fi
+            ;;
+    esac
+    echo "$COLOR"
+}
+
+print_color() {
+    QUERY=$1
+    KEY=$2
+    NOCOL=$3
+    NEWLINE=$4
+    COLOR_HEX=$(get_color_hex $1)
+    [ -z $NOCOL ] && COLOR_HEX=$(colorize_hex "$COLOR_HEX")
+    OUT="$(print_color_key $KEY)${COLOR_HEX}"
+    [ ! -z $NEWLINE ] && OUT="$OUT\n"
+    echo -ne "$OUT"
+}
+
+BG_HEX="$(jq -r .[\"special\"].background $COLORS_JSON)"
 BG_R=$((16#${BG_HEX:1:2}))
 BG_G=$((16#${BG_HEX:3:2}))
 BG_B=$((16#${BG_HEX:5:2}))
-case $QUERY in
-    color*)
-        COLOR_CODE=$(printf '%s\n' "${QUERY#*color}")
-        if [ $COLOR_CODE -gt 15 ] || [ $COLOR_CODE -lt 0 ]; then
-            >&2 echo "Only numeric colors 0-15 are valid."
-            exit 1
-        fi
-		COLOR=$(jq -r .[\"colors\"].$QUERY $SCHEME_JSON)
-        if [ "$2" == "noformat" ]; then
-            # For use in scripts, mostly. We omit the newline and coloration
-            echo -n $COLOR
-            exit 0
-        fi
-        if [ ! command -v bc > /dev/null 2>&1 ]; then
-            >&2 echo "bc is not installed. could not colorize text."
-            echo -n $COLOR
-            exit 0
-        fi
-        BG_L="$(rgb_luminance $BG_R $BG_G $BG_B)"
-        echo $(format_out_hex $COLOR)
-        ;;
-    *)
-        COLOR=$(jq -r .[\"special\"].$QUERY $SCHEME_JSON)
-        if [ "$COLOR" == "null" ]; then
-            >&2 echo "Color not found: $COLOR"
-            exit 1; 
-        fi
-        if [ "$2" == "noformat" ]; then
-            echo -n $COLOR
-        else
-            echo $COLOR
-        fi
-        ;;
-esac
+BG_L="$(rgb_luminance $BG_R $BG_G $BG_B)"
 
+string_width() {
+    echo "$1" |  sed 's/\x1B\[[0-9;]*[a-zA-Z]//g' | wc -L
+}
+
+colors_max_width() {
+    local COLORS=("$@")
+    COLORS_MW=0
+    for COLOR in "${COLORS[@]}"; do
+        WIDTH=$(string_width "$COLOR")
+        [ $WIDTH -gt $COLORS_MW ] && COLORS_MW=$WIDTH
+    done
+    echo $COLORS_MW
+}
+
+pretty_print_align_hex() {
+    local COLOR=$1
+    local COLOR_MW=$2
+    WIDTH=$(string_width "$COLOR")
+    DELTA=$((COLOR_MW - WIDTH))
+    if [[ $DELTA -gt 0 ]]; then
+        local IFS=' '
+        read -ra COLOR_P <<< "$COLOR"
+        echo -n "${COLOR_P[0]}"
+        printf '%*s' "$((DELTA + 1))" ''
+        echo -n "${COLOR_P[1]}"
+    else
+        echo -n "${COLOR}"
+    fi
+}
+
+pretty_print_all() {
+    local COLOR_COLUMNS="$1"
+    shift
+    local COLORS=("$@")
+    # Get max width
+    COLORS_MW=$(colors_max_width "${COLORS[@]}")
+    MAX_I=$((${#COLORS[@]} / $COLOR_COLUMNS))
+    for i in $(eval echo {0..$((MAX_I - 1))}); do
+        for j in $(eval echo {0..$(($COLOR_COLUMNS - 1))}); do
+            IDX=$((i + j * MAX_I))
+            COLOR="${COLORS[$IDX]}"
+            WIDTH=$(string_width "$COLOR")
+            SPACES=$(($((COLORS_MW - WIDTH)) + PRETTY_PRINT_PADDING))
+            pretty_print_align_hex "$COLOR" "$COLORS_MW"
+            printf '%*s' "$SPACES" ''
+        done
+        echo ""
+    done
+}
+
+main() {
+    QUERY=$1
+    NOCOL=$2
+    case "$QUERY" in
+        "all")
+            COLORS=()
+            COLORS_SPECIAL=()
+            for i in {0..15}; do
+                QUERY="color${i}"
+                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "$NOCOL" "")
+                COLORS+=("$COLOR_OUT")
+            done
+            SPEC_KEYS=$(jq -r '.special | keys[]' "$COLORS_JSON")
+            while IFS="\r" read QUERY; do
+                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "$NOCOL" "")
+                COLORS_SPECIAL+=("$COLOR_OUT")
+            done <<< $SPEC_KEYS
+            pretty_print_all 2 "${COLORS[@]}"
+            pretty_print_all 1 "${COLORS_SPECIAL[@]}"
+            ;;
+        *)
+            print_color "$QUERY" "" "$NOCOL" "1"
+            ;;
+    esac
+}
+
+main $QUERY $NOCOL
