@@ -1,12 +1,41 @@
 #!/usr/bin/env bash
 
-THEME=$(cat $THEME_DIR/current-theme)
-if [ -f $THEME_DIR/$THEME/fetch-logo.png ]; then
-	echo -e "\n" # Workaround for spacing issue
-	fastfetch \
-		--logo-width 20 --logo-height 9 --logo-type kitty \
-		--logo $THEME_DIR/$THEME/fetch-logo.png
-else
-	fastfetch --logo arch_small
-fi
+# Configs / Env #
+###########
+THEME_HOME=${THEME_HOME:-"$HOME/.config/theme"}
+THEME=$(cat $THEME_HOME/current-theme)
+LOGO_DIR="$THEME_HOME/$THEME/fastfetch"
+LOGO_DEFAULT="small" # Can also be a filepath
+###########
+
+USE_DEFAULT=0
+[ ! -d "$THEME_HOME" ] && >&2 echo "THEME_HOME not found." && USE_DEFAULT=1
+[ ! -d "$LOGO_DIR"   ]
+[   -z   "$THEME"    ] && >&2 echo "THEME not set: $THEME." && USE_DEFAULT=1
+
+get_logo() {
+    [ "$USE_DEFAULT" = 1 ] && return 1
+    [ ! -d "$LOGO_DIR" ] && return 1
+    local LOGOS=$(find "$LOGO_DIR" -type f | shuf)
+    [ -z "$LOGOS" ] && return 1
+    local LOGO=$(echo "$LOGOS" | head -n 1)
+    [ ! -f "$LOGO" ] && return
+    echo "$LOGOS" | head -n 1
+    return 0
+}
+
+get_flags() {
+    if [ "$USE_DEFAULT" = 1 ]; then
+        echo "" && return
+    fi
+    echo "--logo-width 20 --logo-height 9 --logo-type kitty"
+}
+
+LOGO=$(get_logo)
+USE_DEFAULT=$?
+[ -z "$LOGO" ] && LOGO=$LOGO_DEFAULT
+FLAGS=$(get_flags)
+
+echo -e "\n" # Workaround for spacing issue
+fastfetch $FLAGS --logo $LOGO
 
