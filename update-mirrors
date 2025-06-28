@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+echo "Updating pacman mirrors may take a few minutes."
+echo "NOTE: /etc/pacman.d/mirrorlist will be overwritten."
+echo -n "Continue? (Y/n) "
+read OPT
+OPT=$(echo "${OPT:-"Y"}" | tr '[a-z]' '[A-Z]')
+
+[ $OPT == "Y" ] && sudo reflector \
+    --latest 10 \
+    --sort rate \
+    --country "United States", \
+    --protocol https \
+    --save /etc/pacman.d/mirrorlist
+
