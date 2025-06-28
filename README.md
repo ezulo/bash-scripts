@@ -1,13 +1,15 @@
-# Getting Started
+# Eduardo's Hyprland User Scripts
+
+## Getting Started
 Add this directory to your $PATH to enable user scripts. Reading both this page
 and the script contents is recommended before use. Edits are encouraged, though
 hopefully not required :)
 
-# `themectl`
-This script is responsible for all theming of eligible services
+## `themectl` / `themecolor`
+These scripts are responsible for theming. 
 See [here](../theme/.skeleton/README.md#themectl) for reference.
 
-# `rofi-session`
+## `rofi-session`
 A rofi wrapper to provide a menu for shutdown/reboot/logout/lock/sleep.
 The default keybind is `Mod+Shift+Q`. 
 
@@ -20,7 +22,7 @@ the following to the file `/etc/sudoers.d/shutdown`:
 eduardo ALL = NOPASSWD: /sbin/halt, /sbin/reboot, /sbin/poweroff
 ```
 
-# `rofi-audio`
+## `rofi-audio`
 Default keybind is `Mod+V`.
 
 A rofi wrapper to set the default pipewire audio sink. Will switch the audio
@@ -33,7 +35,7 @@ from using defaults, delete `~/.local/state/wireplumber` and restart:
 
 `systemctl --user restart wireplumber.service`
 
-# `rofi-notes`
+## `rofi-notes`
 Default keybind is `Mod+N`.
 
 A rofi wrapper to create / edit markdown notes. Either enter the name of a
@@ -43,13 +45,22 @@ as the name. Notes are saved by default in `$HOME/notes`.
 Note: all notes will be appended with `.md` if you enter a name without an
 `.md` at the end. This is pretty much just for markdown notes.
 
-# `fetch`
+## `fetch`
 Calls `fastfetch` using available logos in the current theme. Will otherwise
 just use a default small logo.
 
-# `screenshot`
+## `screenshot`
 Default keybind is `Mod+P`.
 
 Calls `hyprshot` in region mode. Use the mouse cursor to take a screenshot
 of some region on the screen. Will save to `$HOME/pictures/screenshot` by
 default.
+
+## `testdunst`
+Displays dunst messages of all urgencies, for conveniences' sake when
+customizing dunst configuration.
+
+## `update-mirrors`
+Uses `reflector` to update Pacman mirrors. Will prompt for `sudo` password
+and confirmation before committing mirrors.
+
