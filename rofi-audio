@@ -28,7 +28,6 @@ NEW_DEFAULT=$(echo $OPT | cut -d "." -f1)
 NAME=$(echo $OPT | cut -d "." -f2)
 echo $NEW_DEFAULT
 if ! wpctl set-default $NEW_DEFAULT; then
-    notify-send "rofi-audio" "Could not set default audio sink."
     exit 1
 fi
 
