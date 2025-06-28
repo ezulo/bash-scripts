@@ -51,8 +51,13 @@ if [ $# -eq 0 ]; then
 fi
 COMMAND=$1
 ARG=$2
+CREATE_THEME_SRC="${THEME_HOME}/.skeleton"
+if [ ! -z $3 ]; then
+    CREATE_THEME_SRC="${THEME_HOME}/${3}"
+fi
 
 # Get theme data
+[ ! -f "$THEME_HOME/current-theme" ] && touch "$THEME_HOME/current-theme"
 THEME="$(cat $THEME_HOME/current-theme)"
 AVAILABLE_THEMES="$(ls -1d $THEME_HOME/*/ | sed -e 's/\///')"
 
@@ -199,7 +204,9 @@ theme_kitty() {
         done
         commit_file "$TMP_COLORS" "$OUT_DIR/colors.conf"
     fi
-    commit_dir "$TC_KITTY" "$KITTY_CONFIG_DIR/theme"
+    if ! commit_dir "$TC_KITTY" "$OUT_DIR"; then
+        commit_dir "$TC_SKELETON/kitty" "$OUT_DIR"
+    fi
 }
 
 # Out:
@@ -224,8 +231,7 @@ theme_waybar() {
             "WARN: $COLORS_JSON not found. Ignoring waybar colors."
     fi
     if ! commit_dir "$TC_WAYBAR" "$OUT_DIR"; then
-        notify_warn $FUNCNAME "Could not apply waybar rules."
-        return 1
+        commit_dir "$TC_SKELETON/waybar" "$OUT_DIR"
     fi
 }
 
@@ -262,9 +268,7 @@ theme_dunst() {
     cat "$DUNST_CONFIG_DIR/dunstrc.default" >> "$TMP"
 
     if [ ! -d "$TC_DUNST" ]; then
-        notify_warn $FUNCNAME \
-            "No dunst theme folder found at $TC_DUNST.\nUsing defaults."
-        return 1
+        TC_DUNST="$TC_SKELETON/dunst"
     fi
 
     for INFILE in ${TC_DUNST}/*; do
@@ -300,8 +304,7 @@ theme_rofi() {
             "WARN: $COLORS_JSON not found. Ignoring rofi colors."
     fi
     if ! commit_dir "$TC_ROFI" "$OUT_DIR"; then
-        notify_warn $FUNCNAME "Could not apply rofi rules."
-        return 1
+        commit_dir "$TC_SKELETON/rofi" "$OUT_DIR"
     fi
 }
 
@@ -330,7 +333,7 @@ reload_hyprpaper() {
     WALLPAPER_DIR="$THEME_HOME/$THEME/wallpapers"
     WALLPAPERS=$(find "$WALLPAPER_DIR" -type f | shuf)
     if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$WALLPAPERS" ]; then
-        killall hyprpaper
+        pgrep -f hyprpaper > /dev/null && killall hyprpaper
         return 0
     fi
     if ! pgrep -f hyprpaper > /dev/null; then
@@ -345,6 +348,7 @@ reload_hyprpaper() {
 		echo "wallpaper = $MONITOR, $WALLPAPER" >> \
             "$HYPR_CONFIG_DIR/hyprpaper.conf"
 		hyprctl hyprpaper reload "$MONITOR","$WALLPAPER" &> /dev/null 2>&1
+        sleep 0.2 # Sometimes hyprpaper has a hard time keeping up.
         i=$(($i+1))
 	done
 }
@@ -367,6 +371,7 @@ append_reloaded() {
 }
 
 update_tc_paths() {
+    THEME=${THEME:-".skeleton"}
     SED_SUBST="s/{THEME}/$THEME/"
     COLORS_JSON="$THEME_HOME/$THEME/colors.json"
     TC_DIR=$(echo "$TC_DIR" | sed "$SED_SUBST")
@@ -405,17 +410,21 @@ reload_all() {
 
 create_theme() {
     NEW_THEME=$1
+    if [ ! -d "$CREATE_THEME_SRC" ]; then
+        notify_warn $FUNCNAME \
+            "Source theme not found: $CREATE_THEME_SRC. Using skeleton."
+        CREATE_THEME_SRC="${THEME_HOME}/.skeleton"
+    fi
+    if [ ! -d "$CREATE_THEME_SRC" ]; then
+        notify_log $FUNCNAME "Theme skeleton seems to be missing. Aborted."
+        return 1
+    fi
     if [ -z $NEW_THEME ]; then
         notify_log $FUNCNAME "Theme name missing. Aborted."
         return 1
     fi
-    SKEL="${THEME_HOME}/.skeleton"
     OUT_DIR="${THEME_HOME}/${NEW_THEME}"
-    if [ ! -d "$SKEL" ]; then
-        notify_log $FUNCNAME "Theme skeleton seems to be missing. Aborted."
-        return 1
-    fi
-    cp -r "$SKEL" "$OUT_DIR"
+    cp -r "$CREATE_THEME_SRC" "$OUT_DIR"
     notify_log $FUNCNAME "New theme created at ${OUT_DIR}"
     return 0
 }
@@ -467,29 +476,22 @@ main() {
             echo "$THEME" > "$THEME_HOME/current-theme"
             notify_log "$FUNCNAME" "Theme successfully changed to: $THEME"
             ;;&
-        "set" | "reload")
-            if [ -z $THEME ]; then
-                notify_log "$FUNCNAME" "Theme not set. Nothing to do."
-                exit 0
-            fi
+        "clear")
+            clear_files "$THEME_HOME/current-theme"
+            THEME=
+            ;;&
+        "reload" | "clear" | "set")
             update_tc_paths
             clean_all
             theme_all
             notify_log "$FUNCNAME" "Files written:\n$SEP\n$FILES_OUT$SEP"
             reload_all
-            notify_log "$FUNCNAME" "Theme loaded: $THEME"
             ;;
         "get")
             echo $THEME
             ;;
         "create")
             create_theme $ARG
-            ;;
-        "clear")
-            rm "$THEME_HOME/current-theme"
-            clean_all
-            reload_all
-            notify_log $FUNCNAME "Theme cleared."
             ;;
         *)
             echo "Unknown command: $COMMAND"
@@ -498,4 +500,3 @@ main() {
 }
 
 main
-
