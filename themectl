@@ -1,65 +1,16 @@
 #!/usr/bin/env bash
-
-# Where theme data is stored
-THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme"}
-
-# Theme Config Directories (preceded by "TC_")
-TC_DIR="$THEME_HOME/{THEME}" # THEME will be injected later on
-TC_SKELETON="$THEME_HOME/.skeleton"
-TC_HYPRLAND="$TC_DIR/hyprland"
-TC_KITTY="$TC_DIR/kitty"
-TC_WAYBAR="$TC_DIR/waybar"
-TC_ROFI="$TC_DIR/rofi"
-TC_DUNST="$TC_DIR/dunst"
-
-# Env (init if not set)
-DUNST_CONFIG_DIR="${DUNST_CONFIG_DIR:-$XDG_CONFIG_HOME/dunst}"
-HYPR_CONFIG_DIR="${HYPR_CONFIG_DIR:-$XDG_CONFIG_HOME/hypr}"
-KITTY_CONFIG_DIR="${KITTY_CONFIG_DIR:-$XDG_CONFIG_HOME/kitty}"
-ROFI_CONFIG_DIR="${ROFI_CONFIG_DIR:-$XDG_CONFIG_HOME/rofi}"
-WAYBAR_CONFIG_DIR="${WAYBAR_CONFIG_DIR:-$XDG_CONFIG_HOME/waybar}"
-
-# Required checks
-if [ ! -d "$THEME_HOME" ]; then
-    >&2 echo "No theme home found at ${THEME_HOME}. Exiting."
-    exit 1
-fi
-if [ ! -d "$HYPR_CONFIG_DIR" ]; then
-    >&2 echo "Hyprland config directory missing! Is it installed?"
-    >&2 echo "Please install and set the HYPR_CONFIG_DIR environment variable."
-    exit 1
-fi
-
-# Notifications
-ID="themectl"
-SEP=$(perl -E 'say "-" x 35')
-
-# Globals (don't touch)
+set -e
 IFS='
 '
-COLORS_JSON=
-FILES_OUT=
-RELOADED_FMT="\n$SEP\n"
-RELOADED_STRINGS=()
-DUNST_SUM=
-FLAG_RELOAD_DUNST=
 
-# Error if argument is missing (when calling from the shell)
-if [ $# -eq 0 ]; then
-	echo "No arguments supplied."
-	exit 1
-fi
-COMMAND=$1
-ARG=$2
+# Theme data
+THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme"}
+TC_SKELETON="$THEME_HOME/.skeleton"
+
 CREATE_THEME_SRC="${THEME_HOME}/.skeleton"
 if [ ! -z $3 ]; then
     CREATE_THEME_SRC="${THEME_HOME}/${3}"
 fi
-
-# Get theme data
-[ ! -f "$THEME_HOME/current-theme" ] && touch "$THEME_HOME/current-theme"
-THEME="$(cat $THEME_HOME/current-theme)"
-AVAILABLE_THEMES="$(ls -1d $THEME_HOME/*/ | sed -e 's/\///')"
 
 check_opt() {
 	status=1
@@ -80,390 +31,53 @@ print_available_themes() {
 	echo "-----------------"
 }
 
-notify_warn() {
-    notify-send --urgency=normal "$ID:$1:WARN" "$2"
-}
-
-notify_err() {
-    notify-send --urgency=normal "$ID:$1:ERROR" "$2"
-}
-
-notify_log() {
-    notify-send --urgency=low "$ID:$1" "$2"
-}
-
-
-notify_reloaded() {
-    MSG="$(printf "Services reloaded: ${RELOADED_FMT}" ${RELOADED_STRINGS[@]})"
-    notify_log "$FUNCNAME" "$MSG"
-}
-
-commit_file() {
-    SRC=$1
-    DST=$2
-    cp "$SRC" "$DST"
-    [[ "$DST" =~ ^"$HOME"(/|$) ]] && DST=~${DST#$HOME}
-    FILES_OUT="${FILES_OUT}$DST\n"
-}
-
-commit_dir() {
-    SRC=$1
-    DST=$2
-    if [ ! -d "$SRC" ] || [ ! -d "$DST" ]; then return 1; fi
-    for file in ${SRC}/*; do
-        commit_file "${file}" "${DST}/$(basename $file)"
-    done
-}
-
-clear_files() {
-    for file in "$@"; do rm -f "$file"; done
-}
-
-clear_dir() {
-    DIR=$1
-    if [ -d "$DIR" ]; then
-        for file in "${DIR}"/*; do
-            rm -r "${file}"
-        done
-    fi
-}
-
-# Used by rofi and waybar
-colors_to_css() {
-    OUT=$1
-    PREFIX="@define-color " # Before color key
-    DELIMITER=" " # After color key, before color value
-    SUFFIX=";" # After color value
-    if [ "$2" == "rasi" ]; then
-        PREFIX="\t"
-        DELIMITER=":"
-        SUFFIX=";"
-    fi
-    COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
-    if [ "$COLORBG" != "null" ]; then
-        echo -e "${PREFIX}colorbg${DELIMITER}${COLORBG}${SUFFIX}" >> "$OUT"
-    fi
-    COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
-    if [ "$COLORFG" != "null" ]; then
-        echo -e "${PREFIX}colorfg${DELIMITER}${COLORFG}${SUFFIX}" >> "$OUT"
-    fi
-    COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
-    if [ "$COLORSELBG" != "null" ]; then
-        echo -e "${PREFIX}colorsbg${DELIMITER}${COLORSELBG}${SUFFIX}" >> "$OUT"
-    fi
-    COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
-    if [ "$COLORSELFG" != "null" ]; then
-        echo -e "${PREFIX}colorsfg${DELIMITER}${COLORSELFG}${SUFFIX}" >> "$OUT"
-    fi
-    for idx in $(seq 0 15); do
-        COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
-        if [ "$COLOR" != "null" ]; then
-            echo -e "${PREFIX}color$idx${DELIMITER}${COLOR}${SUFFIX}" >> "$OUT"
-        fi
-    done
-    echo "" >> "$OUT"
-}
-
-# Output:
-# generates a colors.conf and copies over any files from theme kitty directory.
-theme_kitty() {
-    OUT_DIR="$KITTY_CONFIG_DIR/theme"
-    OUT_COLORS="$OUT_DIR/theme/colors.conf"
-    TMP_COLORS="/tmp/kittycolors"
-    if [ ! -f $COLORS_JSON ]; then
-        notify_warn "$FUNCNAME" \
-            "$COLORS_JSON not found. Ignoring kitty colors."
-    else
-        clear_files "$TMP_COLORS"
-        touch "$TMP_COLORS"
-        COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
-        if [ "$COLORBG" != "null" ]; then
-            echo -e "background\t\t$COLORBG" >> $TMP_COLORS
-        fi
-        COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
-        if [ "$COLORFG" != "null" ]; then
-            echo -e "foreground\t\t$COLORFG" >> $TMP_COLORS
-        fi
-        COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
-        if [ "$COLORSELBG" != "null" ]; then
-            echo -e "selection_background\t$COLORSELBG" >> $TMP_COLORS
-        fi
-        COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
-        if [ "$COLORSELFG" != "null" ]; then
-            echo -e "selection_foreground\t$COLORSELFG" >> $TMP_COLORS
-        fi
-        COLORCUR=$(jq -r .[\"special\"].cursor $COLORS_JSON);
-        if [ "$COLORCUR" != "null" ]; then
-            echo -e "cursor\t\t\t$COLORCUR" >> $TMP_COLORS
-        fi
-        for idx in $(seq 0 15); do
-            COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
-            if [ "$COLOR" != "null" ]; then
-                echo -e "color$idx\t\t\t$COLOR" >> $TMP_COLORS
-            fi
-        done
-        commit_file "$TMP_COLORS" "$OUT_DIR/colors.conf"
-    fi
-    if ! commit_dir "$TC_KITTY" "$OUT_DIR"; then
-        commit_dir "$TC_SKELETON/kitty" "$OUT_DIR"
-    fi
-}
-
-# Out:
-# colors.css (waybar CSS color definitions)
-# rules.css (waybar CSS rules)
-theme_waybar() {
-    if [ ! -d "$WAYBAR_CONFIG_DIR" ]; then
-        >&2 echo "Waybar config directory missing: $WAYBAR_CONFIG_DIR"
-        >&2 echo "Ignoring waybar theme."
-        return 1
-    fi
-    COLORS_TMP="/tmp/waybar_colors.css"
-    OUT_DIR="$WAYBAR_CONFIG_DIR/theme"
-    COLORS_OUT="$OUT_DIR/colors.css"
-    [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
-    clear_files "$COLORS_TMP"
-    if [ -f "$COLORS_JSON" ]; then
-        colors_to_css "$COLORS_TMP"
-        commit_file "$COLORS_TMP" "$COLORS_OUT"
-    else
-		notify_warn "$FUNCNAME" \
-            "WARN: $COLORS_JSON not found. Ignoring waybar colors."
-    fi
-    if ! commit_dir "$TC_WAYBAR" "$OUT_DIR"; then
-        commit_dir "$TC_SKELETON/waybar" "$OUT_DIR"
-    fi
-}
-
-# Out:
-# theme.conf (hyprland configuration file)
-theme_hyprland() {
-    OUT_DIR="$HYPR_CONFIG_DIR/theme"
-    if [ ! -d "$TC_HYPRLAND" ]; then
-        notify_warn $FUNCNAME \
-            "Not found: $TC_HYPRLAND. Ignoring hyprland theme."
-        return
-    fi
-    [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
-    commit_dir "$TC_HYPRLAND" "$OUT_DIR"
-}
-
-# Out:
-# This one works a little differently...
-# All files in the theme's dunst/ directory are combined with the
-# with "$DUNST_CONFIG_DIR/dunstrc.default" into "$DUNST_CONFIG_DIR/dunstrc"
-theme_dunst() {
-    if [ ! -d "$DUNST_CONFIG_DIR" ]; then
-        notify_err "$FUNCNAME" \
-            "Dunst config directory not found at $DUNST_CONFIG_DIR. Ignoring."
-        return 1
-    fi
-    TMP="/tmp/dunstrc"
-    OUT="$DUNST_CONFIG_DIR/dunstrc"
-    [ ! -f "$OUT" ] && touch "$OUT"
-    clear_files "$TMP"
-    echo -e "; DO NOT EDIT, WILL BE OVERWRITTEN" > "$TMP"
-    echo -e "; This file was generated by the \`$ID\` script" >> $TMP
-    echo -e "; Edit dunstrc.default instead!\n" >> "$TMP"
-    cat "$DUNST_CONFIG_DIR/dunstrc.default" >> "$TMP"
-
-    if [ ! -d "$TC_DUNST" ]; then
-        TC_DUNST="$TC_SKELETON/dunst"
-    fi
-
-    for INFILE in ${TC_DUNST}/*; do
-        echo "; Start: $THEME / $INFILE" >> "$TMP"
-        cat "$INFILE" >> "$TMP"
-        echo -e "; End: $THEME / $INFILE\n" >> "$TMP"
-    done
-    DUNST_SUM_NEW=$(sha256sum "$TMP" | cut -d " " -f1)
-    if [ "$DUNST_SUM_NEW" != "$DUNST_SUM" ]; then
-        FLAG_RELOAD_DUNST=1  # signals a reload of dunst
-    fi
-    commit_file "$TMP" "$OUT"
-}
-
-theme_rofi() {
-    if [ ! -d "$ROFI_CONFIG_DIR" ]; then
-        notify_warn "$FUNCNAME" "Rofi config directory not found. Ignoring."
-        return
-    fi
-    OUT_DIR="$ROFI_CONFIG_DIR/theme"
-    COLORS_TMP="/tmp/theme_roficolors.rasi"
-    COLORS_OUT="$OUT_DIR/colors.rasi"
-    if [ ! -d "$ROFI_CONFIG_DIR/theme" ]; then
-        mkdir "$ROFI_CONFIG_DIR/theme"
-    fi
-    if [ -f "$COLORS_JSON" ]; then
-        echo "* {" > $COLORS_TMP
-        colors_to_css "$COLORS_TMP" "rasi"
-        echo "}" >> $COLORS_TMP
-        commit_file "$COLORS_TMP" "$COLORS_OUT"
-    else
-		notify_warn "$FUNCNAME" \
-            "WARN: $COLORS_JSON not found. Ignoring rofi colors."
-    fi
-    if ! commit_dir "$TC_ROFI" "$OUT_DIR"; then
-        commit_dir "$TC_SKELETON/rofi" "$OUT_DIR"
-    fi
-}
-
-reload_kitty() {
-    # Ignore if command does not exist
-    if ! command -v kitty > /dev/null; then
-        return 1
-    fi
-    kill -SIGUSR1 $(pgrep kitty)
-}
-
-reload_waybar() {
-    # Ignore if command does not exist
-    if ! command -v waybar > /dev/null; then
-        return 1
-    fi
-	[[ ! -z $(pgrep -x "waybar") ]] && killall waybar
-	waybar > /dev/null 2>&1 &
-}
-
-reload_hyprpaper() {
-    # Ignore if command does not exist
-    if ! command -v hyprpaper > /dev/null; then
-        return 1
-    fi
-    WALLPAPER_DIR="$THEME_HOME/$THEME/wallpapers"
-    WALLPAPERS=$(find "$WALLPAPER_DIR" -type f | shuf)
-    if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$WALLPAPERS" ]; then
-        pgrep -f hyprpaper > /dev/null && killall hyprpaper
-        return 0
-    fi
-    if ! pgrep -f hyprpaper > /dev/null; then
-        hyprpaper > /dev/null 2>&1 &
-    fi
-	MONITORS=$(hyprctl monitors -j | jq -r -r '.[] | .name')
-	echo -n "" > "$HYPR_CONFIG_DIR/hyprpaper.conf"
-    i=1
-	for MONITOR in $MONITORS; do
-		WALLPAPER=$(echo "$WALLPAPERS"| head -n $i | tail -n 1)
-		echo "preload = $WALLPAPER" >> "$HYPR_CONFIG_DIR/hyprpaper.conf"
-		echo "wallpaper = $MONITOR, $WALLPAPER" >> \
-            "$HYPR_CONFIG_DIR/hyprpaper.conf"
-		hyprctl hyprpaper reload "$MONITOR","$WALLPAPER" &> /dev/null 2>&1
-        sleep 0.2 # Sometimes hyprpaper has a hard time keeping up.
-        i=$(($i+1))
-	done
-}
-
-reload_hyprland() {
-    hyprctl reload > /dev/null 2>&1
-}
-
-reload_dunst() {
-    # Ignore if command does not exist
-    if ! command -v dunst > /dev/null; then
-        return 1
-    fi
-    dunstctl reload
-}
-
-append_reloaded() {
-    RELOADED_FMT="${RELOADED_FMT}%b\n"
-    RELOADED_STRINGS=( "${RELOADED_STRINGS[@]}" "$1" )
-}
-
-update_tc_paths() {
-    THEME=${THEME:-".skeleton"}
-    SED_SUBST="s/{THEME}/$THEME/"
-    COLORS_JSON="$THEME_HOME/$THEME/colors.json"
-    TC_DIR=$(echo "$TC_DIR" | sed "$SED_SUBST")
-    TC_HYPRLAND=$(echo "$TC_HYPRLAND" | sed "$SED_SUBST" )
-    TC_WAYBAR=$(echo "$TC_WAYBAR" | sed "$SED_SUBST")
-    TC_ROFI=$(echo "$TC_ROFI" | sed "$SED_SUBST")
-    TC_DUNST=$(echo "$TC_DUNST" | sed "$SED_SUBST")
-}
-
-theme_all() {
-    theme_kitty
-    theme_waybar
-    theme_hyprland
-    theme_rofi
-    theme_dunst
-}
-
-reload_all() {
-    reload_kitty && append_reloaded "kitty"
-    reload_waybar && append_reloaded "waybar"
-    reload_hyprpaper && append_reloaded "hyprpaper"
-    reload_hyprland && append_reloaded "hyprland"
-    if [ ! -z $FLAG_RELOAD_DUNST ]; then
-        notify_warn "$FUNCNAME" "$(printf "%b%b"\
-            "Change to dunst config detected $DUNST_NEW_FILE.\n" \
-            "Waiting for message timeouts to reload..." \
-        )"
-        while [ $(dunstctl "count" "displayed") -gt 0 ]; do
-            sleep 0.1
-        done
-        reload_dunst && append_reloaded "dunst"
-        sleep 0.5
-    fi
-    notify_reloaded
-}
-
 create_theme() {
     NEW_THEME=$1
     if [ ! -d "$CREATE_THEME_SRC" ]; then
-        notify_warn $FUNCNAME \
+        notify-warn $FUNCNAME \
             "Source theme not found: $CREATE_THEME_SRC. Using skeleton."
         CREATE_THEME_SRC="${THEME_HOME}/.skeleton"
     fi
     if [ ! -d "$CREATE_THEME_SRC" ]; then
-        notify_log $FUNCNAME "Theme skeleton seems to be missing. Aborted."
+        notify-log $FUNCNAME "Theme skeleton seems to be missing. Aborted."
         return 1
     fi
     if [ -z $NEW_THEME ]; then
-        notify_log $FUNCNAME "Theme name missing. Aborted."
+        notify-log $FUNCNAME "Theme name missing. Aborted."
         return 1
     fi
     OUT_DIR="${THEME_HOME}/${NEW_THEME}"
     cp -r "$CREATE_THEME_SRC" "$OUT_DIR"
-    notify_log $FUNCNAME "New theme created at ${OUT_DIR}"
+    notify-log $FUNCNAME "New theme created at ${OUT_DIR}"
     return 0
 }
 
-clean_hyprland() {
-    clear_dir "$HYPR_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/hyprland/* "$HYPR_CONFIG_DIR/theme/"
-}
-
-clean_waybar() {
-    clear_dir "$WAYBAR_CONFIG_DIR/theme/"
-    cp -r "${TC_SKELETON}"/waybar/* "$WAYBAR_CONFIG_DIR/theme/"
-}
-
-clean_rofi() {
-    clear_dir "$ROFI_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/rofi/* "$ROFI_CONFIG_DIR/theme/"
-}
-
-clean_dunst() {
-    DUNST_SUM=$(sha256sum "$DUNST_CONFIG_DIR/dunstrc" | cut -d " " -f1)
-    cp "$DUNST_CONFIG_DIR/dunstrc.default" "$DUNST_CONFIG_DIR/dunstrc"
-}
-
-clean_kitty() {
-    clear_dir "$KITTY_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/kitty/* "$KITTY_CONFIG_DIR/theme/"
-}
-
-# Returns system theme to a clean slate
 clean_all() {
-    clean_hyprland
-    clean_waybar
-    clean_rofi
-    clean_dunst
-    clean_kitty
+    for MOD in "${THEME_MODULES[@]}"; do ${MOD}_clean; done
+}
+theme_all() {
+    for MOD in "${THEME_MODULES[@]}"; do ${MOD}_theme; done
+}
+reload_all() {
+    for MOD in "${THEME_MODULES[@]}"; do ${MOD}_reload; done
+}
+
+THEME_MODULES=
+load_modules() {
+    for MOD in "${THEME_MODULES[@]}"; do
+        if [ ! -f "$XDG_CONFIG_HOME/scripts/include/themectl/modules/$MOD" ]; then
+            >&2 echo "Missing module: $MOD"
+            return 1
+        fi
+        source "$XDG_CONFIG_HOME/scripts/include/themectl/modules/$MOD"
+        log_to_console $FUNCNAME "INFO" "Loaded $MOD"
+    done
+    source "$XDG_CONFIG_HOME/scripts/include/themectl/util/colors"
 }
 
 main() {
+    source "$XDG_CONFIG_HOME/scripts/include/themectl/util/log"
+    source "$XDG_CONFIG_HOME/scripts/include/themectl/util/file"
     case "$COMMAND" in
         "set")
             THEME_NEW=$ARG
@@ -474,18 +88,20 @@ main() {
             fi
             THEME=$THEME_NEW
             echo "$THEME" > "$THEME_HOME/current-theme"
-            notify_log "$FUNCNAME" "Theme successfully changed to: $THEME"
+            notify-log "$FUNCNAME" "Theme successfully changed to: $THEME"
             ;;&
         "clear")
             clear_files "$THEME_HOME/current-theme"
             THEME=
             ;;&
         "reload" | "clear" | "set")
-            update_tc_paths
+            THEME=${THEME:-".skeleton"}
+            TC_DIR="$THEME_HOME/$THEME" 
+            load_modules
             clean_all
             theme_all
-            notify_log "$FUNCNAME" "Files written:\n$SEP\n$FILES_OUT$SEP"
             reload_all
+            notify-log $FUNCNAME "Theme loaded: $THEME"
             ;;
         "get")
             echo $THEME
@@ -499,4 +115,29 @@ main() {
     esac
 }
 
+readarray -t THEME_MODULES \
+    < "$XDG_CONFIG_HOME/scripts/include/themectl/active-modules"
+
+# Checks
+if [ "${#THEME_MODULES[@]}" = "0" ]; then
+    >&2 echo "No modules loaded. Nothing to do."
+    exit 1
+fi
+if [ ! -d "$THEME_HOME" ]; then
+    >&2 echo "No theme home found at ${THEME_HOME}. Exiting."
+    exit 1
+fi
+if [ $# -eq 0 ]; then
+	echo "No arguments supplied."
+	exit 1
+fi
+COMMAND=$1
+ARG=$2
+
+# Get current theme data
+[ ! -f "$THEME_HOME/current-theme" ] && touch "$THEME_HOME/current-theme"
+THEME="$(cat $THEME_HOME/current-theme)"
+AVAILABLE_THEMES="$(ls -1d $THEME_HOME/*/ | sed -e 's/\///')"
+
 main
+

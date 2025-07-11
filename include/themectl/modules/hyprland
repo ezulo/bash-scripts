@@ -1,0 +1,29 @@
+TC_HYPRLAND="$TC_DIR/hyprland"
+HYPR_CONFIG_DIR="${HYPR_CONFIG_DIR:-$XDG_CONFIG_HOME/hypr}"
+
+if [ ! -d "$HYPR_CONFIG_DIR" ]; then
+    >&2 echo "Hyprland config directory missing! Is it installed?"
+    >&2 echo "Please install and set the HYPR_CONFIG_DIR environment variable."
+    exit 1
+fi
+
+hyprland_theme() {
+    OUT_DIR="$HYPR_CONFIG_DIR/theme"
+    if [ ! -d "$TC_HYPRLAND" ]; then
+        notify-warn $FUNCNAME \
+            "Not found: $TC_HYPRLAND. Ignoring hyprland theme."
+        return
+    fi
+    [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
+    commit_dir "$TC_HYPRLAND" "$OUT_DIR"
+}
+
+hyprland_reload() {
+    hyprctl reload > /dev/null 2>&1
+}
+
+hyprland_clean() {
+    clear_dir "$HYPR_CONFIG_DIR/theme/"
+    cp -r ${TC_SKELETON}/hyprland/* "$HYPR_CONFIG_DIR/theme/"
+}
+

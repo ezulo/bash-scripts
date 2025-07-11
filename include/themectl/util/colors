@@ -1,0 +1,38 @@
+export COLORS_JSON="$THEME_HOME/$THEME/colors.json"
+
+# Used by rofi and waybar
+colors_to_css() {
+    OUT=$1
+    PREFIX="@define-color " # Before color key
+    DELIMITER=" " # After color key, before color value
+    SUFFIX=";" # After color value
+    if [ "$2" == "rasi" ]; then
+        PREFIX="\t"
+        DELIMITER=":"
+        SUFFIX=";"
+    fi
+    COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
+    if [ "$COLORBG" != "null" ]; then
+        echo -e "${PREFIX}colorbg${DELIMITER}${COLORBG}${SUFFIX}" >> "$OUT"
+    fi
+    COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
+    if [ "$COLORFG" != "null" ]; then
+        echo -e "${PREFIX}colorfg${DELIMITER}${COLORFG}${SUFFIX}" >> "$OUT"
+    fi
+    COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
+    if [ "$COLORSELBG" != "null" ]; then
+        echo -e "${PREFIX}colorsbg${DELIMITER}${COLORSELBG}${SUFFIX}" >> "$OUT"
+    fi
+    COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
+    if [ "$COLORSELFG" != "null" ]; then
+        echo -e "${PREFIX}colorsfg${DELIMITER}${COLORSELFG}${SUFFIX}" >> "$OUT"
+    fi
+    for idx in $(seq 0 15); do
+        COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
+        if [ "$COLOR" != "null" ]; then
+            echo -e "${PREFIX}color$idx${DELIMITER}${COLOR}${SUFFIX}" >> "$OUT"
+        fi
+    done
+    echo "" >> "$OUT"
+}
+

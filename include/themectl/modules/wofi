@@ -1,0 +1,44 @@
+TC_WOFI="$TC_DIR/wofi"
+WOFI_CONFIG_DIR="${WOFI_CONFIG_DIR:-$XDG_CONFIG_HOME/wofi}"
+
+wofi_theme() {
+    if [ ! -d "$WOFI_CONFIG_DIR" ]; then
+        notify-warn "$FUNCNAME" "Rofi config directory not found. Ignoring."
+        return
+    fi
+    OUT_DIR="$WOFI_CONFIG_DIR/theme"
+    COLORS_TMP="/tmp/theme_woficolors.css"
+    clear_files "$COLORS_TMP"
+    COLORS_OUT="$OUT_DIR/colors.css"
+    COLORS_CSS=
+    if [ ! -d "$WOFI_CONFIG_DIR/theme" ]; then
+        mkdir "$WOFI_CONFIG_DIR/theme"
+    fi
+    if [ -f "$COLORS_JSON" ]; then
+        colors_to_css "$COLORS_TMP"
+        COLORS_CSS=$(cat "$COLORS_TMP" | tr '\n' '|')
+        # commit_file "$COLORS_TMP" "$COLORS_OUT"
+    else
+		notify-warn "$FUNCNAME" "$COLORS_JSON not found. Ignoring wofi colors."
+    fi
+    if ! [ -d "$TC_WOFI" ]; then
+        notify-warn $FUNCNAME "Wofi config directory missing. Using defaults."
+        TC_WOFI="$TC_SKELETON/wofi"
+    fi
+    for TC_FILE in "$TC_WOFI"/*; do
+        TMP_FILE="/tmp/theme_$(basename $TC_FILE)"
+        OUT_FILE="$OUT_DIR/$(basename $TC_FILE)"
+        sed "s/{COLORS_CSS}/${COLORS_CSS}/" "$TC_FILE" | sed "s/|/\n/g" > "$TMP_FILE"
+        commit_file "$TMP_FILE" "$OUT_FILE"
+    done
+}
+
+wofi_clean() {
+    clear_dir "$WOFI_CONFIG_DIR/theme/"
+    cp -r ${TC_SKELETON}/wofi/* "$WOFI_CONFIG_DIR/theme/"
+}
+
+wofi_reload() {
+    echo "Nothing to do" > /dev/null
+}
+

@@ -1,0 +1,40 @@
+TC_WAYBAR="$TC_DIR/waybar"
+WAYBAR_CONFIG_DIR="${WAYBAR_CONFIG_DIR:-$XDG_CONFIG_HOME/waybar}"
+
+waybar_theme() {
+    if [ ! -d "$WAYBAR_CONFIG_DIR" ]; then
+        >&2 echo "Waybar config directory missing: $WAYBAR_CONFIG_DIR"
+        >&2 echo "Ignoring waybar theme."
+        return 1
+    fi
+    COLORS_TMP="/tmp/waybar_colors.css"
+    OUT_DIR="$WAYBAR_CONFIG_DIR/theme"
+    COLORS_OUT="$OUT_DIR/colors.css"
+    [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
+    clear_files "$COLORS_TMP"
+    if [ -f "$COLORS_JSON" ]; then
+        colors_to_css "$COLORS_TMP"
+        commit_file "$COLORS_TMP" "$COLORS_OUT"
+    else
+		notify-warn "$FUNCNAME" \
+            "WARN: $COLORS_JSON not found. Ignoring waybar colors."
+    fi
+    if ! commit_dir "$TC_WAYBAR" "$OUT_DIR"; then
+        commit_dir "$TC_SKELETON/waybar" "$OUT_DIR"
+    fi
+}
+
+waybar_reload() {
+    # Ignore if command does not exist
+    if ! command -v waybar > /dev/null; then
+        return 1
+    fi
+	[[ ! -z $(pgrep -x "waybar") ]] && killall waybar
+	waybar > /dev/null 2>&1 &
+}
+
+waybar_clean() {
+    clear_dir "$WAYBAR_CONFIG_DIR/theme/"
+    cp -r "${TC_SKELETON}"/waybar/* "$WAYBAR_CONFIG_DIR/theme/"
+}
+

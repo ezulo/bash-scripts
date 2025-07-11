@@ -1,0 +1,22 @@
+ID="themectl"
+SEP=$(perl -E 'say "-" x 35')
+
+log_to_console() {
+    echo "$ID:$1:$2" "$3"
+}
+
+notify-warn() {
+    log_to_console "$1" "WARN" "$2"
+    notify-send --urgency=normal "$ID:$1:WARN" "$2"
+}
+
+notify-err() {
+    log_to_console "$1" "ERROR" "$2"
+    notify-send --urgency=normal "$ID:$1:ERROR" "$2"
+}
+
+notify-log() {
+    log_to_console "$1" "INFO" "$2"
+    notify-send --urgency=low "$ID:$1:INFO" "$2"
+}
+

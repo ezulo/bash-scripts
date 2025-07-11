@@ -1,0 +1,34 @@
+clear_files() {
+    for file in "$@"; do rm -f "$file"; done
+}
+
+clear_dir() {
+    DIR=$1
+    if [ -d "$DIR" ]; then
+        for file in "${DIR}"/*; do
+            rm -r "${file}"
+        done
+    fi
+}
+
+commit_dir() {
+    SRC=$1
+    DST=$2
+    if [ ! -d "$SRC" ] || [ ! -d "$DST" ]; then return 1; fi
+    for file in ${SRC}/*; do
+        commit_file "${file}" "${DST}/$(basename $file)"
+    done
+}
+
+commit_file() {
+    SRC=$1
+    DST=$2
+    if [ -d "$SRC" ]; then
+        # ALARM BELL: potential recursion. proceed with care.
+        commit_dir "$SRC" "$DST" && return
+    fi
+    cp "$SRC" "$DST"
+    [[ "$DST" =~ ^"$HOME"(/|$) ]] && DST=~${DST#$HOME}
+    # append-written "$DST"
+}
+
