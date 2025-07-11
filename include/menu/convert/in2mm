@@ -1,0 +1,8 @@
+in2mm() {
+    local IN=$1
+    [ -z $IN ] && return
+    printf "%b\n" \
+        $(bc <<< "$IN * 25.4")
+    cache_append "$FUNCNAME" "$IN"
+}
+

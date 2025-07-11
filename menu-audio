@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
+set -e
+source "$XDG_CONFIG_HOME/scripts/include/menu/util"
+
 # const
-ROFI_PROMPT="Select an audio sink"
+MENU_PROMPT="Select an audio sink"
+ID="menu-audio"
 
 # get list of sinks
 SINKS_RAW=$(wpctl status)
@@ -19,8 +23,7 @@ while IFS= read -r LINE; do
     SINKS="$(echo "$LINE" | cut -c 10- | rev | cut -c 12- | rev)\n${SINKS}"
 done <<< "$SINKS_TRIM"
 
-# rofi
-OPT=$(echo -e $SINKS | rofi -dmenu -p "$ROFI_PROMPT")
+OPT=$(d_read "$ID" "$SINKS" "$MENU_PROMPT")
 
 # set new default
 
@@ -31,6 +34,5 @@ if ! wpctl set-default $NEW_DEFAULT; then
     exit 1
 fi
 
-notify-send --urgency=low "rofi-audio" \
-    "Set default sink to:\n$(echo $NAME | xargs)"
+notify-send --urgency=low "$ID" "Set default sink to:\n$NAME"
 

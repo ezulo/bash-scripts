@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 
 set -e
+source "$XDG_CONFIG_HOME/scripts/include/menu/util"
 
 # Const
-ROFI_PROMPT="session [$USER]"
+MENU_PROMPT="session [$USER]"
+ID="menu-session"
 
-OPTIONS="\
+OPTS="\
 logout
 lock
 sleep
 shutdown
 reboot"
 
-OPT=$(echo -e "$OPTIONS" | rofi -dmenu -p "$ROFI_PROMPT")
+OPT=$(d_read "menu-session" "$OPTS" "$MENU_PROMPT")
 
 case $OPT in
     "logout")
@@ -22,15 +24,15 @@ case $OPT in
         hyprlock
         ;;
     "sleep")
-        notify-send "rofi-session" "sleep not yet implemented..."
+        systemctl suspend
         ;;
     "shutdown")
-        shutdown 0
+        shutdown -ah now
         ;;
     "reboot")
-        reboot 0
+        shutdown -ar now
         ;;
     *)
-        notify-send "rofi-session" "unrecognized: $OPT"
+        exit 1
 esac
 

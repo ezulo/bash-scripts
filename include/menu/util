@@ -1,0 +1,14 @@
+MENU_CMD="wofi -d"
+
+d_read() {
+    local ID="$1"
+    local OPTS="$2"
+    local MENU_PROMPT="$3"
+    local CMD=${4:-$MENU_CMD}
+    printf "%b" $(echo -e "$OPTS" | $CMD -p "$ID | $MENU_PROMPT")
+}
+
+# Right now does nothing different
+d_read_strict() {
+    d_read "$1" "$2" "$3"
+}

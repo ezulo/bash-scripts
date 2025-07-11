@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
 set -e
+source "$XDG_CONFIG_HOME/scripts/include/menu/util"
+
+ID="menu-notes"
 
 # Const
 ROFI_PROMPT="notes [$USER]"
@@ -9,14 +12,10 @@ HYPR_TERMINAL=${HYPR_TERMINAL:-kitty}
 NOTES_DIR=${NOTES_DIR:-~/notes}
 
 CREATE_NEW="New..."
-LS_NOTES=$(ls --color=none -1 "$NOTES_DIR")
-OPT=$(echo -e "$CREATE_NEW\n$LS_NOTES" | rofi -dmenu -p "$ROFI_PROMPT")
+LS_NOTES=$(ls -t --color=none -1 "$NOTES_DIR")
+OPT=$(d_read "$ID" "$CREATE_NEW\n$LS_NOTES" "$ROFI_PROMPT")
+[ -z "$OPT" ] && exit 1
 NOW=$(date +"%Y-%m-%dT%H:%M:%S%z")
-echo $HYPR_TERMINAL
-echo $NOTES_DIR
-echo $NOW
-echo $LS_NOTES
-echo $OPT
 
 FILE="$OPT"
 

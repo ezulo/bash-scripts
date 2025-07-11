@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+set -e
+INCLUDE_DIR="$XDG_CONFIG_HOME/scripts/include/menu"
+source "$INCLUDE_DIR/util"
+
+ID="menu-convert"
+OPTS=("in2ft" "in2mm")
+MAX_CACHE_SZ=15
+
+OPTS=()
+for FILE in "$XDG_CONFIG_HOME"/scripts/include/menu/convert/*; do
+    OPTS=( ${OPTS[@]} $(basename "$FILE") )
+done
+
+CACHE_DIR="$XDG_CACHE_HOME/$ID"
+MENU_PROMPT_MAIN="Select conversion:"
+
+mkdir -p "$CACHE_DIR"
+
+unit_to_string() {
+    local UNIT="$1"
+    case "$UNIT" in
+        "in")
+            echo "inches"
+            ;;
+        "ft")
+            echo "feet"
+            ;;
+        "yd")
+            echo "yards"
+            ;;
+        "mm")
+            echo "millimeters"
+            ;;
+        "cm")
+            echo "centimeters"
+            ;;
+        "m")
+            echo "meters"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+opt_to_string() {
+    local INPUT="$1"
+    local DELIM=${2:-"2"}
+    printf "%b%b%b" \
+        $(unit_to_string $(cut -d "$DELIM" -f1 <<< "$INPUT")) \
+        " to " \
+        $(unit_to_string $(cut -d "$DELIM" -f2 <<< "$INPUT"))
+}
+
+cache_fetch() {
+    local CACHE_ID="$1"
+    local DELIM="${2:-$'\n'}"
+    local CACHE_FILE="$XDG_CACHE_HOME/$ID/$CACHE_ID"
+    [ ! -f "$CACHE_FILE" ] && touch "$CACHE_FILE" && return
+    local FIRST_LINE=1
+    while read LINE; do
+        if [ "$FIRST_LINE" = "1" ]; then
+            FIRST_LINE=0 && printf "%b" "$LINE" && continue
+        fi
+        printf "%b%b%b" "$RET" "$DELIM" "$LINE"
+    done <<< $(cat $CACHE_FILE)
+}
+
+cache_append() {
+    local CACHE_ID="$1"
+    local CACHE_NEW_ITEM="$2"
+    local DELIM="${3:-$'\n'}"
+    local CACHE_FILE="$XDG_CACHE_HOME/$ID/$CACHE_ID"
+    local CACHE_STREAM=$(
+        cache_fetch "$CACHE_ID" "$DELIM" | sed "/$CACHE_NEW_ITEM/d")
+    printf "%b%b%b" "$CACHE_NEW_ITEM" "$DELIM" "$CACHE_STREAM" \
+        | head -n $MAX_CACHE_SZ > "$CACHE_FILE"
+}
+
+MENU_OPTS=
+for OPTS_I in "${OPTS[@]}"; do
+    OPTS_I="$OPTS_I | $(opt_to_string $OPTS_I)"
+    [ -z "$MENU_OPTS" ] && MENU_OPTS="$OPTS_I" && continue
+    MENU_OPTS="$MENU_OPTS\n$OPTS_I"
+done
+
+MENU_OUT=$(d_read "$ID" "$MENU_OPTS" "$MENU_PROMPT_MAIN")
+OPT=$(cut -d '|' -f1 <<< "$MENU_OUT")
+NUM_RE='^[+-]?[0-9]+([.][0-9]+)?$'
+
+# "Pure bash" way to check if OPT is in the OPTS array (using for loop)
+for OPTS_I in "${OPTS[@]}"; do
+    case $OPT in
+        "$OPTS_I")
+            FROM_UNIT=$(unit_to_string $(cut -d 2 -f1 <<< "$OPT"))
+            TO_UNIT=$(unit_to_string $(cut -d 2 -f2 <<< "$OPT"))
+            VAL=$(d_read_strict "$ID" "$(cache_fetch $OPT)" \
+                "Enter $FROM_UNIT to convert to $TO_UNIT")
+            if ! [[ "$VAL" =~ $NUM_RE ]]; then
+                notify-send $ID "Not a number: $VAL"
+                exit 1
+            fi
+            source "$INCLUDE_DIR/convert/$OPT"
+            OUT=$($OPT "$VAL")
+            notify-send $ID \
+                "$VAL $FROM_UNIT to $TO_UNIT:\n$OUT"
+            exit 0
+            ;;
+        *)
+            continue
+            ;;
+    esac
+done
+
+
