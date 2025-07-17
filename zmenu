@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# This is a script for graphical menu subscripts
+# These are tailored towards a "dmenu-like" interface, but can be retooled
+# Supported functions:
+# audio | convert | notes | scaling | session | zeit
+
+set -e
+
+MODULE=$1
+
+ID="zmenu"
+INCLUDE_DIR=${ZMENU_INCLUDE:-"$XDG_CONFIG_HOME/scripts/include/zmenu"}
+source "$INCLUDE_DIR/util"
+
+if [ ! -f "$INCLUDE_DIR/modules/$MODULE" ]; then
+    notify-send "$ID:ERROR" "Module not found: $MODULE"
+    exit 1
+fi
+
+# Invoke the module
+ID="zmenu:$MODULE"
+source "$INCLUDE_DIR/modules/$MODULE"
+

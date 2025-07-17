@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 divide_by_thousand() {
     local NUM="$1"
     local LEN="${#NUM}"

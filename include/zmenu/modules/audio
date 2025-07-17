@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
-source "$XDG_CONFIG_HOME/scripts/include/menu/util"
-
-# const
 MENU_PROMPT="Select an audio sink"
-ID="menu-audio"
 
 # get list of sinks
 SINKS_RAW=$(wpctl status)

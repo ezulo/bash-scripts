@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
-source "$XDG_CONFIG_HOME/scripts/include/menu/util"
-
-# Const
-MENU_PROMPT="session [$USER]"
-ID="menu-session"
+MENU_PROMPT="What would you like to do, $USER?"
 
 OPTS="\
 logout
@@ -14,7 +9,7 @@ sleep
 shutdown
 reboot"
 
-OPT=$(d_read "menu-session" "$OPTS" "$MENU_PROMPT")
+OPT=$(d_read "$ID" "$OPTS" "$MENU_PROMPT")
 
 case $OPT in
     "logout")

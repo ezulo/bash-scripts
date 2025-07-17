@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+export ZEIT_DB="$XDG_CONFIG_HOME/zeit/zeit.db"
+ZEIT_CMD="$HOME/.local/bin/zeit"
+ZEIT_GET="$HOME/.local/bin/zeitget"
+
+notify-log() {
+    notify-send "$ID:LOG" "$1"
+}
+
+poll_zeit() {
+    if "$ZEIT_GET"; then
+        return 0
+    fi
+    return 1
+}
+ 
+if poll_zeit; then
+    Z_TASK=$("$ZEIT_GET" task)
+    Z_PROJ=$("$ZEIT_GET" proj)
+    Z_TIME=$("$ZEIT_GET" time)
+    Z_STRING="$Z_TASK on $Z_PROJ @ $Z_TIME"
+    if ! d_read_yes_no "$ID" "Finish the current task ($Z_PROJ / $Z_TASK @ $Z_TIME)?"; then
+        echo "boop"
+        exit 1
+    fi
+    set +e 
+    OUT=$("$ZEIT_CMD" finish)
+    RET=$?
+    if [ $RET = 0 ]; then
+        notify-log "zeit task finished:\n$Z_STRING"
+    else
+        notify-log "failed $RET\n$OUT"
+        exit 1
+    fi
+    if ! d_read_yes_no "$ID" "Start tracking a new task?"; then 
+        exit 0; 
+    fi
+fi
+
+PROJECT=$(d_read_cached "$ID" "projects" "Enter a Project:")
+echo $PROJECT
+[ -z "$PROJECT" ] && notify-send "$ID:ERROR" "No project selected" && exit 1
+TASK=$(d_read_cached "$ID" "${PROJECT}/tasks" "${MENU_PROMPT}Enter a Task:")
+[ -z "$TASK" ] && notify-send "$ID:ERROR" "No task selected" && exit 1
+
+"$ZEIT_CMD" track --project "$PROJECT" --task "$TASK" --begin now
+notify-send "$ID" "New task started:\nProject: $PROJECT\nTask: $TASK"
+
