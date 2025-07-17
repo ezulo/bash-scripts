@@ -5,8 +5,6 @@
 # Supported functions:
 # audio | convert | notes | scaling | session | zeit
 
-set -e
-
 MODULE=$1
 
 ID="zmenu"

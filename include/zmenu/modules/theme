@@ -22,8 +22,9 @@ case $OPT in
     set)
         AV_THEMES="$($THEMECTL ls)"
         THEME_OPT=$(d_read "$ID" "$AV_THEMES" "$MENU_PROMPT")
-        if [ -z "$(echo $AV_THEMES | grep ^$THEME_OPT$)" ]; then
+        if [ -z $(echo "$AV_THEMES" | grep "^$THEME_OPT\$") ]; then
             notify-send "$ID" "Theme not found: $THEME_OPT"
+            exit 1
         fi
         $("$THEMECTL" set "$THEME_OPT")
         ;;
