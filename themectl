@@ -124,7 +124,7 @@ main() {
             fi
             THEME=$THEME_NEW
             echo "$THEME" > "$THEME_HOME/current-theme"
-            notify-log "$FUNCNAME" "Theme successfully changed to: $THEME"
+            notify-log "$FUNCNAME" "Theme files updated for: $THEME"
             ;;&
         "clear")
             clear_files "$THEME_HOME/current-theme"

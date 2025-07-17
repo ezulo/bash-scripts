@@ -9,17 +9,16 @@ wofi_theme() {
         return
     fi
     local OUT_DIR="$WOFI_CONFIG_DIR/theme"
-    local CSS_TMP="/tmp/theme_woficolors.css"
+    local CSS_TMP="/tmp/theme_wofi/colors.css"
     local CSS_OUT="$OUT_DIR/colors.css"
+    mkdir -p $(dirname "$CSS_TMP")
     clear_files "$CSS_TMP"
-    if [ ! -d "$WOFI_CONFIG_DIR/theme" ]; then
-        mkdir "$WOFI_CONFIG_DIR/theme"
-    fi
+    [ ! -d "$OUT_DIR" ] && mkdir -p "$OUT_DIR"
+    [ ! -d "$(dirname $CSS_TMP)" ] && mkdir -p "$(dirname $CSS_TMP)"
     local COLORS_CSS=
     if [ -f "$COLORS_JSON" ]; then
-        colors_to_css "$COLORS_JSON" "$CSS_TMP"
-        COLORS_CSS=$(cat "$CSS_TMP" | tr '\n' '|')
-        # commit_file "$CSS_TMP" "$CSS_OUT"
+        colors_to_css "$COLORS_JSON" "$CSS_TMP" "no_header"
+        COLORS_CSS=$(cat "$CSS_TMP")
     else
 		notify-warn "$FUNCNAME" "$COLORS_JSON not found. Ignoring wofi colors."
     fi
@@ -28,10 +27,16 @@ wofi_theme() {
         TC_WOFI="$TC_SKELETON/wofi"
     fi
     for TC_FILE in "$TC_WOFI"/*; do
-        local TMP_FILE="/tmp/theme_$(basename $TC_FILE)"
-        local OUT_FILE="$OUT_DIR/$(basename $TC_FILE)"
-        sed "s/{COLORS_CSS}/${COLORS_CSS}/" "$TC_FILE" | sed "s/|/\n/g" > "$TMP_FILE"
-        commit_file "$TMP_FILE" "$OUT_FILE"
+        local FILE_OUT="$OUT_DIR/$(basename $TC_FILE)"
+        write_file_header "$FILE_OUT" "$TC_FILE" "${TC_FILE##*.}"
+        awk -v repl="$COLORS_CSS" '
+        {
+            if ($0 == "{COLORS_CSS}") {
+                print repl
+            } else {
+                print
+            }
+        }' "$TC_FILE" >> "$FILE_OUT"
     done
 }
 

@@ -6,6 +6,8 @@ colors_to_css() {
     '
     local COLORS_JSON="$1"
     local OUT="$2"
+    local NO_HEADER=
+    [ "$3" == "no_header" ] && NO_HEADER=1
     local THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme/$THEME"}
     PREFIX="@define-color " # Before color key
     DELIMITER=" " # After color key, before color value
@@ -15,7 +17,7 @@ colors_to_css() {
         DELIMITER=":"
         SUFFIX=";"
     fi
-    write_file_header "$OUT" "$COLORS_JSON" "css"
+    [ -z "$NO_HEADER" ] && write_file_header "$OUT" "$COLORS_JSON" "css"
     COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
     if [ "$COLORBG" != "null" ]; then
         echo -e "${PREFIX}colorbg${DELIMITER}${COLORBG}${SUFFIX}" >> "$OUT"
