@@ -9,16 +9,10 @@ wofi_theme() {
         return
     fi
     local OUT_DIR="$WOFI_CONFIG_DIR/theme"
-    local CSS_TMP="/tmp/theme_wofi/colors.css"
-    local CSS_OUT="$OUT_DIR/colors.css"
-    mkdir -p $(dirname "$CSS_TMP")
-    clear_files "$CSS_TMP"
+    local OUT_COLORS_CSS="$OUT_DIR/colors.css"
     [ ! -d "$OUT_DIR" ] && mkdir -p "$OUT_DIR"
-    [ ! -d "$(dirname $CSS_TMP)" ] && mkdir -p "$(dirname $CSS_TMP)"
-    local COLORS_CSS=
     if [ -f "$COLORS_JSON" ]; then
-        colors_to_css "$COLORS_JSON" "$CSS_TMP" "no_header"
-        COLORS_CSS=$(cat "$CSS_TMP")
+        colors_to_css "$COLORS_JSON" "$OUT_COLORS_CSS"
     else
 		notify-warn "$FUNCNAME" "$COLORS_JSON not found. Ignoring wofi colors."
     fi
@@ -28,15 +22,8 @@ wofi_theme() {
     fi
     for TC_FILE in "$TC_WOFI"/*; do
         local FILE_OUT="$OUT_DIR/$(basename $TC_FILE)"
-        write_file_header "$FILE_OUT" "$TC_FILE" "${TC_FILE##*.}"
-        awk -v repl="$COLORS_CSS" '
-        {
-            if ($0 == "{COLORS_CSS}") {
-                print repl
-            } else {
-                print
-            }
-        }' "$TC_FILE" >> "$FILE_OUT"
+        echo "$OUT_COLORS_CSS"
+        sed 's|{_COLORS_CSS_}|'$OUT_COLORS_CSS'|' "$TC_FILE" >> "$FILE_OUT"
     done
 }
 
