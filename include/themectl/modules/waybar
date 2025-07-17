@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 TC_WAYBAR="$TC_DIR/waybar"
 WAYBAR_CONFIG_DIR="${WAYBAR_CONFIG_DIR:-$XDG_CONFIG_HOME/waybar}"
 
@@ -7,14 +9,12 @@ waybar_theme() {
         >&2 echo "Ignoring waybar theme."
         return 1
     fi
-    COLORS_TMP="/tmp/waybar_colors.css"
-    OUT_DIR="$WAYBAR_CONFIG_DIR/theme"
-    COLORS_OUT="$OUT_DIR/colors.css"
-    [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
-    clear_files "$COLORS_TMP"
+    local OUT_DIR="$WAYBAR_CONFIG_DIR/theme"
+    local CSS_OUT="$OUT_DIR/colors.css"
+    [ ! -d "$OUT_DIR" ] && mkdir -p "$OUT_DIR"
     if [ -f "$COLORS_JSON" ]; then
-        colors_to_css "$COLORS_TMP"
-        commit_file "$COLORS_TMP" "$COLORS_OUT"
+        write_file_header "$CSS_OUT" "$COLORS_JSON" "css"
+        colors_to_css "$COLORS_JSON" "$CSS_OUT"
     else
 		notify-warn "$FUNCNAME" \
             "WARN: $COLORS_JSON not found. Ignoring waybar colors."

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 TC_HYPRLAND="$TC_DIR/hyprland"
 HYPR_CONFIG_DIR="${HYPR_CONFIG_DIR:-$XDG_CONFIG_HOME/hypr}"
 
@@ -7,23 +9,33 @@ if [ ! -d "$HYPR_CONFIG_DIR" ]; then
     exit 1
 fi
 
+TMP_DIR="/tmp/theme_hyprland"
+OUT_DIR="$HYPR_CONFIG_DIR/theme"
+[ ! -d "$TMP_DIR" ] && mkdir "$TMP_DIR"
+[ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
+
+# Commits our config files to a tmp directory, because hyprland spams errors if
+# you try to directly write them before reloading. We commit them during reload.
 hyprland_theme() {
-    OUT_DIR="$HYPR_CONFIG_DIR/theme"
+    local SRC_DIR="$TC_HYPRLAND"
     if [ ! -d "$TC_HYPRLAND" ]; then
         notify-warn $FUNCNAME \
-            "Not found: $TC_HYPRLAND. Ignoring hyprland theme."
-        return
+            "hyprland files missing:\n$TC_HYPRLAND.\nUsing default config."
+        SRC_DIR="$TC_SKELETON/hyprland"
+        return 0
     fi
-    [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
-    commit_dir "$TC_HYPRLAND" "$OUT_DIR"
+    clear_dir  "$TMP_DIR"
+    commit_dir "$SRC_DIR" "$TMP_DIR"
 }
 
 hyprland_reload() {
+    clear_dir "$OUT_DIR"
+    commit_dir "$TC_HYPRLAND" "$OUT_DIR"
+    clear_dir "$TMP_DIR"
     hyprctl reload > /dev/null 2>&1
 }
 
 hyprland_clean() {
-    clear_dir "$HYPR_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/hyprland/* "$HYPR_CONFIG_DIR/theme/"
+    notify-debug $FUNCNAME "Nothing done."
 }
 

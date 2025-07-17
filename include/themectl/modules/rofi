@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 TC_ROFI="$TC_DIR/rofi"
 ROFI_CONFIG_DIR="${ROFI_CONFIG_DIR:-$XDG_CONFIG_HOME/rofi}"
 
@@ -6,17 +8,17 @@ rofi_theme() {
         notify-warn "$FUNCNAME" "Rofi config directory not found. Ignoring."
         return
     fi
-    OUT_DIR="$ROFI_CONFIG_DIR/theme"
-    COLORS_TMP="/tmp/theme_roficolors.rasi"
-    COLORS_OUT="$OUT_DIR/colors.rasi"
+    local OUT_DIR="$ROFI_CONFIG_DIR/theme"
+    local RASI_TMP="/tmp/theme_roficolors.rasi"
+    local RASI_OUT="$OUT_DIR/colors.rasi"
     if [ ! -d "$ROFI_CONFIG_DIR/theme" ]; then
         mkdir "$ROFI_CONFIG_DIR/theme"
     fi
     if [ -f "$COLORS_JSON" ]; then
-        echo "* {" > $COLORS_TMP
-        colors_to_css "$COLORS_TMP" "rasi"
-        echo "}" >> $COLORS_TMP
-        commit_file "$COLORS_TMP" "$COLORS_OUT"
+        echo "* {" > $RASI_TMP
+        colors_to_css "$COLORS_JSON" "$RASI_TMP" "rasi"
+        echo "}" >> $RASI_TMP
+        commit_file "$RASI_TMP" "$RASI_OUT"
     else
 		notify-warn "$FUNCNAME" \
             "WARN: $COLORS_JSON not found. Ignoring rofi colors."

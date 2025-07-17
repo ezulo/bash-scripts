@@ -1,44 +1,52 @@
+#!/usr/bin/env bash
+
 TC_KITTY="$TC_DIR/kitty"
 KITTY_CONFIG_DIR="${KITTY_CONFIG_DIR:-$XDG_CONFIG_HOME/kitty}"
 
-kitty_theme() {
-    OUT_DIR="$KITTY_CONFIG_DIR/theme"
-    OUT_COLORS="$OUT_DIR/theme/colors.conf"
-    TMP_COLORS="/tmp/kittycolors"
+# Private function; Generates kitty theme colors.conf
+__colors_json_to_kitty_conf() {
+    set -e
+    local COLORS_JSON=$1
+    local OUT_CONF=$2
     if [ ! -f $COLORS_JSON ]; then
         notify-warn "$FUNCNAME" \
             "$COLORS_JSON not found. Ignoring kitty colors."
     else
-        clear_files "$TMP_COLORS"
-        touch "$TMP_COLORS"
+        write_file_header "$OUT_CONF" "$COLORS_JSON" "conf"
         COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
         if [ "$COLORBG" != "null" ]; then
-            echo -e "background\t\t$COLORBG" >> $TMP_COLORS
+            echo -e "background\t\t$COLORBG" >> $OUT_CONF
         fi
         COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
         if [ "$COLORFG" != "null" ]; then
-            echo -e "foreground\t\t$COLORFG" >> $TMP_COLORS
+            echo -e "foreground\t\t$COLORFG" >> $OUT_CONF
         fi
         COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
         if [ "$COLORSELBG" != "null" ]; then
-            echo -e "selection_background\t$COLORSELBG" >> $TMP_COLORS
+            echo -e "selection_background\t$COLORSELBG" >> $OUT_CONF
         fi
         COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
         if [ "$COLORSELFG" != "null" ]; then
-            echo -e "selection_foreground\t$COLORSELFG" >> $TMP_COLORS
+            echo -e "selection_foreground\t$COLORSELFG" >> $OUT_CONF
         fi
         COLORCUR=$(jq -r .[\"special\"].cursor $COLORS_JSON);
         if [ "$COLORCUR" != "null" ]; then
-            echo -e "cursor\t\t\t$COLORCUR" >> $TMP_COLORS
+            echo -e "cursor\t\t\t$COLORCUR" >> $OUT_CONF
         fi
         for idx in $(seq 0 15); do
             COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
             if [ "$COLOR" != "null" ]; then
-                echo -e "color$idx\t\t\t$COLOR" >> $TMP_COLORS
+                echo -e "color$idx\t\t\t$COLOR" >> $OUT_CONF
             fi
         done
-        commit_file "$TMP_COLORS" "$OUT_DIR/colors.conf"
     fi
+}
+
+kitty_theme() {
+    local OUT_DIR="$KITTY_CONFIG_DIR/theme"
+    local OUT_COLORS_CONF="$OUT_DIR/colors.conf"
+    [ ! -d "$OUT_DIR" ] && mkdir -p "$OUT_DIR"
+    __colors_json_to_kitty_conf "$COLORS_JSON" "$OUT_COLORS_CONF"
     if ! commit_dir "$TC_KITTY" "$OUT_DIR"; then
         commit_dir "$TC_SKELETON/kitty" "$OUT_DIR"
     fi

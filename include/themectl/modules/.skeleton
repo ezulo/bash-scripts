@@ -1,5 +1,7 @@
 # SKELETON FILE (not to be used directly)
 
+#!/usr/bin/env bash
+
 #
 # themectl module
 # PRE-REQUISITE:

@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+
+# This themectl utility pulls color values out of the current theme's 
+# `scheme.json` and prints them (prettily)
+
+# Luminance Delta Threshold (0 through 255) (default: 70)
+# When the background and color are too similar, we color the output background 
+# instead of the foreground. Decrease this to make this effect more sensitive.
+L_DELTA_THRESHOLD=70
+
+# Space between pretty print inline members
+PRETTY_PRINT_PADDING=5
+
+if [ -z $THEME ]; then
+    >&2 echo "No theme detected. Set 'THEME' environment var to your theme name."
+    exit 1
+fi
+if [ ! -f $COLORS_JSON ]; then
+    >&2 echo "scheme.json not found at $THEME_DIR/$THEME"
+    >&2 echo "Does this theme not have a color scheme defined?"
+    exit 1
+fi
+
+NO_COLOR=
+if [ ! command -v bc > /dev/null 2>&1 ]; then
+    >&2 echo "WARNING: bc not found. Color output disabled."
+    NO_COLOR=1
+fi
+
+# Helper function to calculate perceived luminance, used for colorizing output
+rgb_luminance() {
+    local EQ="0.2126 * $1 + 0.7152 * $2 + 0.0722 * $3"
+    local L=$(echo "$EQ" | bc);
+    printf "%.0f" "$L"
+}
+
+# Colorizes color hex (#000000 to #ffffff)
+colorize_hex() {
+    local HEX=$1 #e.g. "#012345"
+    local HEX_REGEX="^#[0-9|a-f]+$"
+    if [[ ! $HEX =~ $HEX_REGEX ]] || [ $(echo "$HEX" | wc -L) -ne 7 ]; then
+        echo -ne "${HEX}[INVALID]"
+        return 1
+    fi
+    local R=$((16#"${HEX:1:2}"))
+    local G=$((16#"${HEX:3:2}"))
+    local B=$((16#"${HEX:5:2}"))
+    local L=$(rgb_luminance $R $G $B)
+    local BG_L=$(bg_luminance)
+    local L_DELTA=$(echo "$BG_L - $L" | bc)
+    local COL_FG="\\033[38;2"
+    local COL_BG="\\033[48;2"
+    local COL_SEQ="${COL_FG};${R};${G};${B}m"
+    local COL_CLEAR='\033[0m'
+    if [ ${L_DELTA#-} -lt $L_DELTA_THRESHOLD ]; then
+        COL_SEQ="${COL_BG};${R};${G};${B}m"
+    fi
+    echo -n "${COL_SEQ}${HEX}${COL_CLEAR}"
+}
+
+# Gets hex code from colors.json based on query
+get_color_hex() {
+    local QUERY=$1
+    case $QUERY in
+        color*)
+            local COLOR_CODE=$(echo "${QUERY#*color}")
+            if [ $COLOR_CODE -gt 15 ] || [ $COLOR_CODE -lt 0 ]; then
+                >&2 echo "Only numeric colors 0-15 are valid."
+                return 1
+            fi
+            COLOR=$(jq -r .[\"colors\"].$QUERY $COLORS_JSON)
+            ;;
+        *)
+            COLOR=$(jq -r .[\"special\"].$QUERY $COLORS_JSON)
+            if [ "$COLOR" == "null" ]; then
+                >&2 echo "Color not found: $COLOR"
+                return 1; 
+            fi
+            ;;
+    esac
+    echo "$COLOR"
+}
+
+# Prints colorized output (or non-colorized, if NO_COLOR is set)
+print_color() {
+    QUERY=$1
+    KEY=$2
+    NO_COLOR=$3
+    NEWLINE=$4
+    [ -z "$KEY" ] && KEY="$QUERY"
+    COLOR_HEX=$(get_color_hex $1)
+    [ -z $NO_COLOR ] && COLOR_HEX=$(colorize_hex "$COLOR_HEX")
+    OUT=$(echo -n "${KEY}: ")"${COLOR_HEX}"
+    [ ! -z $NEWLINE ] && OUT="$OUT\n"
+    printf "%b" "$OUT"
+}
+
+# Calculates background luminance (uses color0 if background undefined)
+bg_luminance() {
+    BG_HEX=$(get_color_hex background || get_color_hex color0)
+    BG_R=$((16#${BG_HEX:1:2}))
+    BG_G=$((16#${BG_HEX:3:2}))
+    BG_B=$((16#${BG_HEX:5:2}))
+    printf "%b" "$(rgb_luminance $BG_R $BG_G $BG_B)"
+}
+
+string_width() {
+    echo "$1" |  sed 's/\x1B\[[0-9;]*[a-zA-Z]//g' | wc -L
+}
+
+colors_max_width() {
+    local COLORS=("$@")
+    COLORS_MW=0
+    for COLOR in "${COLORS[@]}"; do
+        WIDTH=$(string_width "$COLOR")
+        [ $WIDTH -gt $COLORS_MW ] && COLORS_MW=$WIDTH
+    done
+    echo $COLORS_MW
+}
+
+pretty_print_align_hex() {
+    local COLOR=$1
+    local COLOR_MW=$2
+    WIDTH=$(string_width "$COLOR")
+    DELTA=$((COLOR_MW - WIDTH))
+    if [[ $DELTA -gt 0 ]]; then
+        local IFS=' '
+        read -ra COLOR_P <<< "$COLOR"
+        echo -n "${COLOR_P[0]}"
+        printf '%*s' "$((DELTA + 1))" ''
+        echo -n "${COLOR_P[1]}"
+    else
+        echo -n "${COLOR}"
+    fi
+}
+
+pretty_print_all() {
+    local COLOR_COLUMNS="$1"
+    shift
+    local COLORS=("$@")
+    # Get max width
+    COLORS_MW=$(colors_max_width "${COLORS[@]}")
+    MAX_I=$((${#COLORS[@]} / $COLOR_COLUMNS))
+    for i in $(eval echo {0..$((MAX_I - 1))}); do
+        for j in $(eval echo {0..$(($COLOR_COLUMNS - 1))}); do
+            IDX=$((i + j * MAX_I))
+            COLOR="${COLORS[$IDX]}"
+            WIDTH=$(string_width "$COLOR")
+            SPACES=$(($((COLORS_MW - WIDTH)) + PRETTY_PRINT_PADDING))
+            pretty_print_align_hex "$COLOR" "$COLORS_MW"
+            printf '%*s' "$SPACES" ''
+        done
+        echo ""
+    done
+}
+
+themecolor() {
+    QUERY=$1
+    if [[ "$QUERY" =~ ^[0-9]+$ ]]; then
+        QUERY="color${QUERY}"
+    fi
+    [ -z $NO_COLOR ] && NO_COLOR=$2
+    case "$QUERY" in
+        "all")
+            COLORS=()
+            COLORS_SPECIAL=()
+            for i in {0..15}; do
+                QUERY="color${i}"
+                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "$NO_COLOR" "")
+                COLORS+=("$COLOR_OUT")
+            done
+            SPEC_KEYS=$(jq -r '.special | keys[]' "$COLORS_JSON")
+            while IFS="\r" read QUERY; do
+                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "$NO_COLOR" "")
+                COLORS_SPECIAL+=("$COLOR_OUT")
+            done <<< $SPEC_KEYS
+            pretty_print_all 2 "${COLORS[@]}"
+            pretty_print_all 1 "${COLORS_SPECIAL[@]}"
+            ;;
+        *)
+            print_color "$QUERY" "" "$NO_COLOR" "1"
+            ;;
+    esac
+}
+
+

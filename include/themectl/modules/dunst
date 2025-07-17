@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 TC_DUNST="$TC_DIR/dunst"
 DUNST_CONFIG_DIR="${DUNST_CONFIG_DIR:-$XDG_CONFIG_HOME/dunst}"
 
@@ -30,15 +32,15 @@ dunst_theme() {
         notify-log $FUNCNAME \
             "Dunst config change detected. Waiting for messages to clear..."
         while [ $(dunstctl "count" "displayed") -gt 0 ]; do sleep 0.1; done
+        # Since `dunstctl reload` tends to break dunst, a workaround is to kill
+        # it instead, and give the process time to clear.
+        killall dunst && sleep 0.1
     fi
 }
 
 dunst_reload() {
-    # Ignore if command does not exist
-    if ! command -v dunst > /dev/null; then
-        return 1
-    fi
-    dunstctl reload
+    # We only reload dunst if necessary in the `dunst_theme` function
+    return 0
 }
 
 dunst_clean() {

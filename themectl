@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -e
-IFS='
-'
 
 # Theme data
 THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme"}
 TC_SKELETON="$THEME_HOME/.skeleton"
 
+INCLUDE_DIR="$XDG_CONFIG_HOME/scripts/include/themectl"
+
 CREATE_THEME_SRC="${THEME_HOME}/.skeleton"
-if [ ! -z $3 ]; then
+if [ "$1" = "create" ] && [ ! -z $3 ]; then
     CREATE_THEME_SRC="${THEME_HOME}/${3}"
 fi
 
@@ -23,12 +23,19 @@ check_opt() {
 }
 
 print_available_themes() {
-	echo "Choose from the following themes:" 
-	echo "-----------------"
-	for theme in $AVAILABLE_THEMES; do
-		echo "$(basename $theme)"
-	done
-	echo "-----------------"
+    NO_STYLE=$1
+    if [ ! -z "$NO_STYLE" ]; then
+        for theme in $AVAILABLE_THEMES; do
+            echo "$(basename $theme)"
+        done
+        exit 0
+    fi
+    echo "Choose from the following themes:" 
+    echo "-----------------"
+    for theme in $AVAILABLE_THEMES; do
+        echo "$(basename $theme)"
+    done
+    echo "-----------------"
 }
 
 create_theme() {
@@ -42,6 +49,10 @@ create_theme() {
         notify-log $FUNCNAME "Theme skeleton seems to be missing. Aborted."
         return 1
     fi
+    if [ -d "$NEW_THEME" ]; then
+        notify-warn $FUNCNAME "A theme by the name $NEW_THEME already exists."
+        return 1
+    fi
     if [ -z $NEW_THEME ]; then
         notify-log $FUNCNAME "Theme name missing. Aborted."
         return 1
@@ -52,39 +63,64 @@ create_theme() {
     return 0
 }
 
+ACTIVE_MODULES=
 clean_all() {
-    for MOD in "${THEME_MODULES[@]}"; do ${MOD}_clean; done
+    for MOD in "${ACTIVE_MODULES[@]}"; do ${MOD}_clean; done
 }
 theme_all() {
-    for MOD in "${THEME_MODULES[@]}"; do ${MOD}_theme; done
+    for MOD in "${ACTIVE_MODULES[@]}"; do ${MOD}_theme; done
 }
 reload_all() {
-    for MOD in "${THEME_MODULES[@]}"; do ${MOD}_reload; done
+    for MOD in "${ACTIVE_MODULES[@]}"; do ${MOD}_reload; done
 }
-
-THEME_MODULES=
 load_modules() {
-    for MOD in "${THEME_MODULES[@]}"; do
-        if [ ! -f "$XDG_CONFIG_HOME/scripts/include/themectl/modules/$MOD" ]; then
-            >&2 echo "Missing module: $MOD"
-            return 1
+    readarray -t ACTIVE_MODULES < "$INCLUDE_DIR/active-modules"
+    for MOD in "${ACTIVE_MODULES[@]}"; do
+        if [ ! -f "$INCLUDE_DIR/modules/$MOD" ]; then
+            notify-err $FUNCNAME \
+                "Missing module: $MOD. Please remove from active-modules."
+            continue
         fi
-        source "$XDG_CONFIG_HOME/scripts/include/themectl/modules/$MOD"
-        log_to_console $FUNCNAME "INFO" "Loaded $MOD"
+        source "$INCLUDE_DIR/modules/$MOD"
+        notify-debug $FUNCNAME "Loaded $MOD"
     done
-    source "$XDG_CONFIG_HOME/scripts/include/themectl/util/colors"
+    source "$INCLUDE_DIR/util/css"
 }
 
+THEME=
 main() {
-    source "$XDG_CONFIG_HOME/scripts/include/themectl/util/log"
-    source "$XDG_CONFIG_HOME/scripts/include/themectl/util/file"
+    COMMAND="$1"
+    shift
+    ARG="$@"
     case "$COMMAND" in
+        "get")
+            echo $THEME
+            ;;
+        "ls")
+            print_available_themes nostyle
+            ;;
+        "clear" | "color" | "create" | "reload" | "set")
+            source "$INCLUDE_DIR/util/log"
+            source "$INCLUDE_DIR/util/file"
+            ;;&
+        "color")
+            source "$INCLUDE_DIR/util/color"
+            themecolor $ARG # Unquoted on purpose...
+            ;;
+        "create")
+            create_theme "$ARG"
+            ;;
         "set")
-            THEME_NEW=$ARG
+            THEME_NEW="$ARG"
             if [ $(check_opt $THEME_NEW) != 0 ]; then
-                echo "Invalid argument."
+                notify-err $FUNCNAME "Invalid argument: $THEME_NEW"
                 print_available_themes
                 exit 1
+            fi
+            if [ "$THEME_NEW" = "$THEME" ]; then
+                notify-warn $FUNCNAME \
+                    "Theme already set to:\n> $THEME\n\nTo reapply files, reload."
+                exit 0
             fi
             THEME=$THEME_NEW
             echo "$THEME" > "$THEME_HOME/current-theme"
@@ -94,20 +130,13 @@ main() {
             clear_files "$THEME_HOME/current-theme"
             THEME=
             ;;&
-        "reload" | "clear" | "set")
+        "clear" | "reload" | "set")
             THEME=${THEME:-".skeleton"}
+            COLORS_JSON="$THEME_HOME/$THEME/colors.json"
             TC_DIR="$THEME_HOME/$THEME" 
-            load_modules
-            clean_all
-            theme_all
-            reload_all
-            notify-log $FUNCNAME "Theme loaded: $THEME"
-            ;;
-        "get")
-            echo $THEME
-            ;;
-        "create")
-            create_theme $ARG
+            load_modules "$INCLUDE_DIR/active-modules"
+            clean_all && theme_all && reload_all && \
+                notify-log $FUNCNAME "Theme loaded: $THEME"
             ;;
         *)
             echo "Unknown command: $COMMAND"
@@ -115,11 +144,9 @@ main() {
     esac
 }
 
-readarray -t THEME_MODULES \
-    < "$XDG_CONFIG_HOME/scripts/include/themectl/active-modules"
 
 # Checks
-if [ "${#THEME_MODULES[@]}" = "0" ]; then
+if [ "${#ACTIVE_MODULES[@]}" = "0" ]; then
     >&2 echo "No modules loaded. Nothing to do."
     exit 1
 fi
@@ -131,13 +158,11 @@ if [ $# -eq 0 ]; then
 	echo "No arguments supplied."
 	exit 1
 fi
-COMMAND=$1
-ARG=$2
 
 # Get current theme data
 [ ! -f "$THEME_HOME/current-theme" ] && touch "$THEME_HOME/current-theme"
 THEME="$(cat $THEME_HOME/current-theme)"
 AVAILABLE_THEMES="$(ls -1d $THEME_HOME/*/ | sed -e 's/\///')"
 
-main
+main $@
 
