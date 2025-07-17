@@ -5,8 +5,8 @@ Add this directory to your $PATH to enable user scripts. Reading both this page
 and the script contents is recommended before use. Edits are encouraged, though
 hopefully not required :)
 
-## `themectl` / `themecolor`
-These scripts are responsible for theming. 
+## `themectl`
+A script responsible for theming. 
 See [here](../theme/.skeleton/README.md#themectl) for reference.
 
 ## `rofi-session`
