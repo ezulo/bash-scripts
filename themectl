@@ -104,6 +104,7 @@ main() {
             source "$INCLUDE_DIR/util/file"
             ;;&
         "color")
+            COLORS_JSON="$THEME_HOME/$THEME/colors.json"
             source "$INCLUDE_DIR/util/color"
             themecolor $ARG # Unquoted on purpose...
             ;;
