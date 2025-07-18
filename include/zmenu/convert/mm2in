@@ -8,7 +8,7 @@ divide_by_thousand() {
     else
         NUM_INT="${NUM:0:LEN-3}"
         NUM_FRACT="${NUM: -3}"
-        printf "%b.%b in." "$NUM_INT" "$NUM_FRACT"
+        printf "%b.%b" "$NUM_INT" "$NUM_FRACT"
     fi
 }
 

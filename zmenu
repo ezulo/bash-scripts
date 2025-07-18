@@ -4,12 +4,17 @@
 # These are tailored towards a "dmenu-like" interface, but can be retooled
 # Supported functions:
 # audio | convert | notes | scaling | session | zeit
-
-MODULE=$1
-
+#
 ID="zmenu"
 INCLUDE_DIR=${ZMENU_INCLUDE:-"$XDG_CONFIG_HOME/scripts/include/zmenu"}
 source "$INCLUDE_DIR/util"
+
+MODULE=$1
+if [ -z "$MODULE" ]; then
+    OPTS=$(ls -t --color=none -1 "$INCLUDE_DIR/modules")
+    MODULE=$(d_read "$ID" "$OPTS" "Select a menu option")
+    [ -z "$MODULE" ] && notify-send "$ID" "No module selected" && exit 1
+fi
 
 if [ ! -f "$INCLUDE_DIR/modules/$MODULE" ]; then
     notify-send "$ID:ERROR" "Module not found: $MODULE"

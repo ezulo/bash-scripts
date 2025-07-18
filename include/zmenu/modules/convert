@@ -59,19 +59,25 @@ for OPTS_I in "${OPTS[@]}"; do
     case $OPT in
         $OPTS_I)
             echo "|$OPT|$OPTS_I|"
-            FROM_UNIT=$(unit_to_string $(cut -d 2 -f1 <<< "$OPT"))
-            TO_UNIT=$(unit_to_string $(cut -d 2 -f2 <<< "$OPT"))
+            FROM_UNIT_ABBREV=$(cut -d 2 -f1 <<< "$OPT")
+            TO_UNIT_ABBREV=$(cut -d 2 -f2 <<< "$OPT")
+            FROM_UNIT=$(unit_to_string "$FROM_UNIT_ABBREV")
+            TO_UNIT=$(unit_to_string "$TO_UNIT_ABBREV")
             VAL=$(d_read_cached "$ID" "$OPT" \
                 "Enter $FROM_UNIT to convert to $TO_UNIT")
-            echo "$VAL"
             if ! [[ "$VAL" =~ $NUM_RE ]]; then
                 notify-send $ID "Not a number: $VAL"
                 exit 1
             fi
             source "$INCLUDE_DIR/convert/$OPT"
             OUT=$($OPT "$VAL")
+            echo -n $OUT | wl-copy
+            # Append abbreviation; don't do it for feet (alrady has notation)
+            if [ "$TO_UNIT_ABBREV" != "ft" ]; then
+                OUT="$OUT $TO_UNIT_ABBREV"
+            fi
             notify-send $ID \
-                "$VAL $FROM_UNIT to $TO_UNIT:\n$OUT"
+                "$VAL $FROM_UNIT to $TO_UNIT:\n$OUT\nCopied to clipboard."
             exit 0
             ;;
         *)

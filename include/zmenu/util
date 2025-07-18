@@ -3,8 +3,8 @@
 # Maximum number of cached entries
 CACHE_MAX_SZ=30
 
-DMENU_CMD="wofi -d"
-KPROMPT_CMD="kitty"
+DMENU_CMD="wofi --dmenu"
+KPROMPT_CMD="kitty-prompt"
 
 # dmenu-like read
 d_read() {
@@ -31,9 +31,16 @@ d_read_yes_no() {
     local ID="$1"
     local MENU_PROMPT="$2"
     local CMD=${3:-$DMENU_CMD}
-    OUT=$(echo -e "Yes\nNo"  | $CMD --insensitive -p "$ID | $MENU_PROMPT")
-    if [[ "$OUT" =~ ^[y|Y].+? ]]; then echo "match" && return 0; fi
-    return 1
+    local DEFAULT="[y|Y]"
+    [[ "$4" =~ ^[n|N] ]] && DEFAULT="[n|N]"
+    echo "hello! $DEFAULT"
+    OUT=$(echo -e "[Yes]\n[No]" | $CMD --insensitive -p "$ID | $MENU_PROMPT")
+    RET=$?
+    echo "goodbye!"
+    [ "$RET" != 0 ] && exit 1
+    RE='^\['$DEFAULT'.*\]$'
+    if [[ "$OUT" =~ $RE ]]; then echo "match" && return 0; fi
+    echo "nomatch $RET / $OUT ($RE)" && return 1
 }
 
 # Right now does nothing different
@@ -44,19 +51,10 @@ d_read_strict() {
 # reads a single line of text from kitty prompt
 k_read() {
     local ID="$1"
-    local PROMPT="$2"
+    local K_PROMPT="$2"
     local TMP="/tmp/t_read_temp"
     rm -f "$TMP"
-    $KPROMPT_CMD \
-        --class kitty-prompt \
-        --override="map Esc close" \
-        --override="confirm_os_window_close 0" \
-        bash -c \
-        'echo '"$ID \| $PROMPT"'; \
-        printf "%*s\n" "$(tput cols)" "" | tr " " "-"; \
-        read -r line; echo "$line" > '"$TMP"
-    OUT=$(cat '/tmp/t_read_temp')
-    printf "%b" "$OUT"
+    "$KPROMPT_CMD" "$ID" "$K_PROMPT"
 }
 
 cache_read_n() {

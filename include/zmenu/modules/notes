@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 # Const
-MENU_PROMPT="Enter / Select a note, or create a timestamped one (default)"
+MENU_PROMPT="Enter / Select a note"
 
 HYPR_TERMINAL=${HYPR_TERMINAL:-kitty}
-NOTES_DIR=${NOTES_DIR:-~/Notes}
+NOTES_DIR=${NOTES_DIR:-$HOME/Notes}
+[ ! -d "$NOTES_DIR" ] && mkdir -p "$NOTES_DIR"
 
 CREATE_NEW="New..."
 LS_NOTES=$(ls -t --color=none -1 "$NOTES_DIR")
