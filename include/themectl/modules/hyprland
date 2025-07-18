@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+ID_HYPRLAND="$_ID:hyprland"
+
 TC_HYPRLAND="$TC_DIR/hyprland"
 HYPR_CONFIG_DIR="${HYPR_CONFIG_DIR:-$XDG_CONFIG_HOME/hypr}"
 
@@ -17,9 +19,10 @@ OUT_DIR="$HYPR_CONFIG_DIR/theme"
 # Commits our config files to a tmp directory, because hyprland spams errors if
 # you try to directly write them before reloading. We commit them during reload.
 hyprland_theme() {
+    local ID="$ID_HYPRLAND:theme"
     local SRC_DIR="$TC_HYPRLAND"
     if [ ! -d "$TC_HYPRLAND" ]; then
-        notify-warn $FUNCNAME \
+        log_warn $ID \
             "hyprland files missing:\n$TC_HYPRLAND.\nUsing default config."
         SRC_DIR="$TC_SKELETON/hyprland"
         return 0
@@ -29,6 +32,7 @@ hyprland_theme() {
 }
 
 hyprland_reload() {
+    ID="$ID_HYPRLAND:reload"
     clear_dir "$OUT_DIR"
     commit_dir "$TC_HYPRLAND" "$OUT_DIR"
     clear_dir "$TMP_DIR"
@@ -36,6 +40,7 @@ hyprland_reload() {
 }
 
 hyprland_clean() {
-    notify-debug $FUNCNAME "Nothing done."
+    ID="$ID_HYPRLAND:clean"
+    log_debug $ID "Nothing done."
 }
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+ID_CSS="$_ID:util:css"
+
 # Used by rofi and waybar
 colors_to_css() {
     local IFS='

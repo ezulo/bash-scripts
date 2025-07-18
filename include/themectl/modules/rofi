@@ -1,39 +1,40 @@
 #!/usr/bin/env bash
 
+ID_ROFI="$_ID:rofi"
+
 TC_ROFI="$TC_DIR/rofi"
 ROFI_CONFIG_DIR="${ROFI_CONFIG_DIR:-$XDG_CONFIG_HOME/rofi}"
 
 rofi_theme() {
-    if [ ! -d "$ROFI_CONFIG_DIR" ]; then
-        notify-warn "$FUNCNAME" "Rofi config directory not found. Ignoring."
-        return
-    fi
+    local ID="$ID_ROFI:theme"
+    [ ! -d "$ROFI_CONFIG_DIR" ] &&
+        log_warn $ID "Rofi config directory not found. Ignoring." && return 1
     local OUT_DIR="$ROFI_CONFIG_DIR/theme"
     local RASI_TMP="/tmp/theme_roficolors.rasi"
     local RASI_OUT="$OUT_DIR/colors.rasi"
-    if [ ! -d "$ROFI_CONFIG_DIR/theme" ]; then
+    [ ! -d "$ROFI_CONFIG_DIR/theme" ] &&
         mkdir "$ROFI_CONFIG_DIR/theme"
-    fi
-    if [ -f "$COLORS_JSON" ]; then
-        echo "* {" > $RASI_TMP
-        colors_to_css "$COLORS_JSON" "$RASI_TMP" "rasi"
-        echo "}" >> $RASI_TMP
-        commit_file "$RASI_TMP" "$RASI_OUT"
-    else
-		notify-warn "$FUNCNAME" \
-            "WARN: $COLORS_JSON not found. Ignoring rofi colors."
-    fi
-    if ! commit_dir "$TC_ROFI" "$OUT_DIR"; then
-        commit_dir "$TC_SKELETON/rofi" "$OUT_DIR"
-    fi
+    [ -f "$COLORS_JSON" ] &&
+        echo "* {" > $RASI_TMP &&
+        colors_to_css "$COLORS_JSON" "$RASI_TMP" "rasi" &&
+        echo "}" >> $RASI_TMP &&
+        commit_file "$RASI_TMP" "$RASI_OUT" \
+        ||
+		log_warn $ID "WARN: $COLORS_JSON not found. Ignoring rofi colors."
+    [ -d "$TC_ROFI" ] &&
+        log_warn $ID "Rofi configs not found. Using defaults."
+        cp -r "$TC_ROFI/"* "$ROFI_CONFIG_DIR/theme/" \
+        ||
+        cp -r ${TC_DEFAULT}/rofi/* "$ROFI_CONFIG_DIR/theme/"
 }
 
 rofi_clean() {
+    local ID="$ID_ROFI:clean"
     clear_dir "$ROFI_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/rofi/* "$ROFI_CONFIG_DIR/theme/"
 }
 
 rofi_reload() {
+    local ID="$ID_ROFI:reload"
     echo "Nothing to do" > /dev/null
 }
 

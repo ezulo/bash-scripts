@@ -1,25 +1,24 @@
 #!/usr/bin/env bash
 
+ID_WOFI="$_ID:wofi"
+
 TC_WOFI="$TC_DIR/wofi"
 WOFI_CONFIG_DIR="${WOFI_CONFIG_DIR:-$XDG_CONFIG_HOME/wofi}"
 
 wofi_theme() {
-    if [ ! -d "$WOFI_CONFIG_DIR" ]; then
-        notify-warn "$FUNCNAME" "Rofi config directory not found. Ignoring."
-        return
-    fi
+    local ID="$ID_WOFI:theme"
+    [ ! -d "$WOFI_CONFIG_DIR" ] &&
+        log_warn $ID "Rofi config directory not found. Ignoring." && return 1
     local OUT_DIR="$WOFI_CONFIG_DIR/theme"
     local OUT_COLORS_CSS="$OUT_DIR/colors.css"
     [ ! -d "$OUT_DIR" ] && mkdir -p "$OUT_DIR"
-    if [ -f "$COLORS_JSON" ]; then
-        colors_to_css "$COLORS_JSON" "$OUT_COLORS_CSS"
-    else
-		notify-warn "$FUNCNAME" "$COLORS_JSON not found. Ignoring wofi colors."
-    fi
-    if ! [ -d "$TC_WOFI" ]; then
-        notify-warn $FUNCNAME "Wofi config directory missing. Using defaults."
-        TC_WOFI="$TC_SKELETON/wofi"
-    fi
+    [ -f "$COLORS_JSON" ] &&
+        colors_to_css "$COLORS_JSON" "$OUT_COLORS_CSS" \
+    ||
+		log_warn $ID "$COLORS_JSON not found. Ignoring wofi colors."
+    [ ! -d "$TC_WOFI" ] &&
+        log_warn $ID "Wofi config directory missing. Using defaults." &&
+        TC_WOFI="$TC_DEFAULT/wofi"
     for TC_FILE in "$TC_WOFI"/*; do
         local FILE_OUT="$OUT_DIR/$(basename $TC_FILE)"
         echo "$OUT_COLORS_CSS"
@@ -28,11 +27,13 @@ wofi_theme() {
 }
 
 wofi_clean() {
+    local ID="$ID_WOFI:clean"
     clear_dir "$WOFI_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/wofi/* "$WOFI_CONFIG_DIR/theme/"
+    cp -r ${TC_DEFAULT}/wofi/* "$WOFI_CONFIG_DIR/theme/"
 }
 
 wofi_reload() {
-    echo "Nothing to do" > /dev/null
+    local ID="$ID_WOFI:reload"
+    log_trace $ID "Nothing to do"
 }
 

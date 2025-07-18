@@ -1,81 +1,80 @@
 #!/usr/bin/env bash
 
 #
-# This themectl utility handles common logging functions.
-# It is probably more convoluted than it needs to be.
+# This `themectl` utility writes logs to stderr
+# Also prints logs via notify-send (libnotify required)
 #
-# `notify-log` | `notify-warn` | `notify-err`
-# Will log to stdout OR stderr and send the log to a notification daemon.
+# `--notify-only` flag will waive printing the log to `stderr`.
 #
-# `notify-debug`
-# Only logs to stdout.
-#
-# Note to self (on stdout logging):
-# Any function returning output through stdout should log with "no_echo":
-# ` notify-log $FUNCNAME "Hello world" no_echo `
-# This applies only to `notify-log` and `notify-debug`
+# Usage:
+# ```bash
+# source $THIS_FILE
+# ...
+# "$SOME_CMD" || log_error $ID "Something went wrong: $?"
+# log_info $ID "Stuff is happening!" --notify-only
+# ```
 #
 
-# Notification daemon commands, change these if using something else
-N_CMD_LOG="  notify-send --urgency=low   "
-N_CMD_WARN=" notify-send --urgency=normal"
-N_CMD_ERR="  notify-send --urgency=normal"
+###############################################################################
+## Configuration ##############################################################
+###############################################################################
 
-ID="themectl"
-SEP=$(perl -E 'say "-" x 35')
+#
+# Default log level (LL)
+#
+LL_DEFAULT=WARN
 
-log_to_stdout() {
-    echo "$ID:$1:$2" "$3"
+#
+# Notification daemon backend commands (empty variable for log level = no-op)
+#
+N_CMDS=(
+    "" # ------------------------------- TRACE - #
+    "" # ------------------------------- DEBUG - #
+    "notify-send --urgency=low" # ------ INFO -- #
+    "notify-send --urgency=normal" #---- WARN -- #
+    "notify-send --urgency=normal" # --- ERROR - #
+    "notify-send --urgency=critical" #-- FATAL - #
+)
+
+###############################################################################
+
+# Use these functions
+log_trace() { __log "TRACE" "$1" "$2" "$3"; }
+log_info()  { __log "INFO"  "$1" "$2" "$3"; }
+log_warn()  { __log "WARN"  "$1" "$2" "$3"; }
+log_error() { __log "ERROR" "$1" "$2" "$3"; }
+log_fatal() { __log "FATAL" "$1" "$2" "$3"; }
+log_debug() { __log "DEBUG" "$1" "$2" "$3"; }
+
+# Log Level
+LL=$LL_DEFAULT
+[ -f "$INCLUDE_DIR/log-level" ] &&
+    echo -n "Polling file for log level..." &&
+    LL=$(cat "$INCLUDE_DIR/log-level") &&
+    echo "set to $LL"
+
+__log_level_value() {
+    local OUT="-1"
+    case $1 in
+        TRACE) OUT=0; ;; DEBUG) OUT=1; ;; INFO) OUT=2 ;;
+        WARN) OUT=3; ;; ERROR) OUT=4; ;; FATAL) OUT=5 ;;
+    esac
+    printf "%b" $OUT
 }
 
-log_to_stderr() {
-    >&2 echo "$ID:$1:$2" "$3"
+__log_filter() {
+    [ $(__log_level_value $LEVEL) -ge $(__log_level_value $LL) ] && return 0
+    return 1
 }
 
 __log() {
-    local FUNC="$1"
-    local LEVEL="$2"
-    local MSG="$3"
-    local NO_ECHO="$4"
-    local HEADER="$ID:$FUNC:$LEVEL"
-    local STREAM=
-    case "$LEVEL" in
-        LOG)
-            STREAM="stdout" && $N_CMD_LOG  "$HEADER" "$MSG"
-            ;;
-        WARN)
-            STREAM="stderr" && $N_CMD_WARN "$HEADER" "$MSG"
-            ;;
-        ERR)
-            STREAM="stderr" && $N_CMD_ERR  "$HEADER" "$MSG"
-            ;;
-        DEBUG)
-            STREAM="stdout"
-            ;;
-    esac
-    [ -z "$NO_ECHO" ] && case "$STREAM" in
-        stdout)
-            echo "$ID:$FUNC:$LEVEL" "$MSG"
-            ;;
-        stderr)
-        >&2 echo "$ID:$FUNC:$LEVEL" "$MSG"
-            ;;
-    esac
-}
-
-notify-log() {
-    __log "$1" "LOG" "$2" "$3"
-}
-
-notify-warn() {
-    __log "$1" "WARN" "$2" "$3"
-}
-
-notify-err() {
-    __log "$1" "ERR" "$2" "$3"
-}
-
-notify-debug() {
-    __log "$1" "DEBUG" "$2" "$3"
+    local LEVEL="$1" && shift && ! __log_filter $LEVEL && return 0
+    local ID="$1" && shift
+    local MSG="$1" && shift
+    local SILENT=$([[ "$@" =~ "--silent " ]] && echo 1)
+    local N_CMD_IDX=$(__log_level_value "$LEVEL")
+    local N_CMD="${N_CMDS[$N_CMD_IDX]}"
+    [ ! -z "$N_CMD" ] && ${N_CMD} "$ID:$LEVEL" "$MSG"
+    [ -z "$SILENT" ] && echo "$ID:$FUNC:$LEVEL |" "$MSG" >&2
 }
 

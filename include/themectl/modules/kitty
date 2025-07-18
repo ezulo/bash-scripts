@@ -1,67 +1,68 @@
 #!/usr/bin/env bash
 
+ID_KITTY="$_ID:kitty"
+
 TC_KITTY="$TC_DIR/kitty"
 KITTY_CONFIG_DIR="${KITTY_CONFIG_DIR:-$XDG_CONFIG_HOME/kitty}"
 
 # Private function; Generates kitty theme colors.conf
 __colors_json_to_kitty_conf() {
+    local ID="$ID_KITTY:$FUNCNAME"
     set -e
     local COLORS_JSON=$1
     local OUT_CONF=$2
-    if [ ! -f $COLORS_JSON ]; then
-        notify-warn "$FUNCNAME" \
-            "$COLORS_JSON not found. Ignoring kitty colors."
-    else
+    [ ! -f $COLORS_JSON ] &&
+        log_warn $ID \
+        "$COLORS_JSON not found. Ignoring kitty colors." \
+    ||
         write_file_header "$OUT_CONF" "$COLORS_JSON" "conf"
         COLORBG=$(jq -r .[\"special\"].background $COLORS_JSON);
-        if [ "$COLORBG" != "null" ]; then
+        [ "$COLORBG" != "null" ] &&
             echo -e "background\t\t$COLORBG" >> $OUT_CONF
-        fi
         COLORFG=$(jq -r .[\"special\"].foreground $COLORS_JSON);
-        if [ "$COLORFG" != "null" ]; then
+        [ "$COLORFG" != "null" ] &&
             echo -e "foreground\t\t$COLORFG" >> $OUT_CONF
-        fi
         COLORSELBG=$(jq -r .[\"special\"].selection_background $COLORS_JSON);
-        if [ "$COLORSELBG" != "null" ]; then
+        [ "$COLORSELBG" != "null" ] &&
             echo -e "selection_background\t$COLORSELBG" >> $OUT_CONF
-        fi
         COLORSELFG=$(jq -r .[\"special\"].selection_foreground $COLORS_JSON);
-        if [ "$COLORSELFG" != "null" ]; then
+        [ "$COLORSELFG" != "null" ] &&
             echo -e "selection_foreground\t$COLORSELFG" >> $OUT_CONF
-        fi
         COLORCUR=$(jq -r .[\"special\"].cursor $COLORS_JSON);
-        if [ "$COLORCUR" != "null" ]; then
+        [ "$COLORCUR" != "null" ] &&
             echo -e "cursor\t\t\t$COLORCUR" >> $OUT_CONF
-        fi
         for idx in $(seq 0 15); do
             COLOR=$(jq -r .[\"colors\"].color$idx $COLORS_JSON)
-            if [ "$COLOR" != "null" ]; then
+            [ "$COLOR" != "null" ] &&
                 echo -e "color$idx\t\t\t$COLOR" >> $OUT_CONF
-            fi
         done
-    fi
 }
 
 kitty_theme() {
+    local ID="$ID_KITTY:theme"
     local OUT_DIR="$KITTY_CONFIG_DIR/theme"
     local OUT_COLORS_CONF="$OUT_DIR/colors.conf"
+    local TC_DIR="$THEME_HOME/kitty"
     [ ! -d "$OUT_DIR" ] && mkdir -p "$OUT_DIR"
+    [ -d "$TC_DIR" ] &&
+        cp -r "$TC_DIR/kitty/"* "$KITTY_CONFIG_DIR/theme/" \
+        ||
+        log_warn $ID "Kitty config not found at $TC_DIR. Using defaults." &&
+        cp -r ${TC_DEFAULT}/kitty/* "$KITTY_CONFIG_DIR/theme/"
     __colors_json_to_kitty_conf "$COLORS_JSON" "$OUT_COLORS_CONF"
-    if ! commit_dir "$TC_KITTY" "$OUT_DIR"; then
-        commit_dir "$TC_SKELETON/kitty" "$OUT_DIR"
-    fi
 }
 
 kitty_reload() {
+    local ID="$ID_KITTY:reload"
     # Ignore if command does not exist
-    if ! command -v kitty > /dev/null; then
-        return 1
-    fi
+    ! command -v kitty > /dev/null &&
+        log_trace "$ID" "kitty not found." && return 1
     kill -SIGUSR1 $(pgrep kitty)
 }
 
 kitty_clean() {
+    local ID="$ID_KITTY:clean"
     clear_dir "$KITTY_CONFIG_DIR/theme/"
-    cp -r ${TC_SKELETON}/kitty/* "$KITTY_CONFIG_DIR/theme/"
+    cp -r ${TC_DEFAULT}/kitty/* "$KITTY_CONFIG_DIR/theme/"
 }
 

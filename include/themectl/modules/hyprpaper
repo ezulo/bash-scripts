@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 
+ID_HYPRPAPER="$_ID:hyprpaper"
+
 hyprpaper_theme() {
-    echo "Do nothing" > /dev/null
+    local ID="$ID_HYPRPAPER:theme"
+    log_trace $ID "Nothing done."
 }
 
 hyprpaper_reload() {
+    local ID="$ID_HYPRPAPER:reload"
     # Ignore if command does not exist
-    if ! command -v hyprpaper > /dev/null; then
-        return 1
-    fi
+    ! command -v hyprpaper > /dev/null && 
+        log_warn $ID "hyprpaper command not found." && return 1
     WALLPAPER_DIR="$THEME_HOME/$THEME/wallpapers"
     WALLPAPERS=$(find "$WALLPAPER_DIR" -type f | shuf)
     if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$WALLPAPERS" ]; then
@@ -33,6 +36,7 @@ hyprpaper_reload() {
 }
 
 hyprpaper_clean() {
-    echo "Do nothing." > /dev/null
+    ID="$ID_HYPRPAPER:clean"
+    log_trace "$ID" "Nothing done."
 }
 
