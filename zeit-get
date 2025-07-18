@@ -12,7 +12,7 @@ RET=$?
 if [ "$RET" != 0 ]; then
     exit $RET
 fi
-[[ "$OUT" =~ ▶\ tracking\ (.*)\ on\ (.*)\ for\ (.*h) ]]
+[[ "$OUT" =~ ▶\ tracking\ (.*)\ on\ (.*)\ for\ (.*)h ]]
 T_PROJ=${BASH_REMATCH[2]}
 T_TASK=${BASH_REMATCH[1]}
 T_TIME=${BASH_REMATCH[3]}
