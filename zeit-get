@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+# Custom zeit wrapper for task / project / time breakdown
+# Intention is for use with waybar
+
+export ZEIT_DB=${ZEIT_DB:-"$XDG_CONFIG_HOME/zeit/zeit.db"}
+ZEIT_CMD=${ZEIT_CMD:-"$HOME/.local/bin/zeit"}
+
+OUT=$("$ZEIT_CMD" tracking --no-colors)
+RET=$?
+if [ "$RET" != 0 ]; then
+    exit $RET
+fi
+[[ "$OUT" =~ ▶\ tracking\ (.*)\ on\ (.*)\ for\ (.*h) ]]
+T_PROJ=${BASH_REMATCH[2]}
+T_TASK=${BASH_REMATCH[1]}
+T_TIME=${BASH_REMATCH[3]}
+
+OPT=$1
+case $OPT in
+    task)
+        echo "$T_TASK"
+        ;;
+    proj*)
+        echo "$T_PROJ"
+        ;;
+    time)
+        echo "$T_TIME"
+        ;;
+    *)
+        echo "$T_PROJ/$T_TASK $T_TIME"
+        ;;
+esac
+
