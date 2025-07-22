@@ -7,6 +7,7 @@ OPTS="get\nset\nreload\nclear\ncreate\n"
 
 THEMECTL="$XDG_CONFIG_HOME/scripts/themectl"
 THEME_HOME="$XDG_CONFIG_HOME/theme"
+export THEME=$(cat "$THEME_HOME/current-theme")
 
 TERMINAL="kitty"
 EDITOR="nvim"
