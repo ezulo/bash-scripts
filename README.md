@@ -15,11 +15,11 @@ required. The following have a hyprland dependency (at least):
 
 ## `themectl`
 A script responsible for theming. 
-See [here](docs/themectl.md) for reference.
+See [here](doc/themectl.md) for reference.
 
 ## `zmenu`
 A wrapper for "dmenu-like" prompt menus.
-See [here](docs/zmenu.md) for reference.
+See [here](doc/zmenu.md) for reference.
 
 ## `fetch`
 Calls `fastfetch` using available logos in the current theme. Will otherwise

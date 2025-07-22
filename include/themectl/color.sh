@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 ID_COLOR="$_ID:util:color"
 
 # This themectl utility pulls color values out of the current theme's 
-# `scheme.json` and prints them (prettily)
+# `colors.json` and prints them (prettily)
 
 # Luminance Delta Threshold (0 through 255) (default: 70)
 # When the background and color are too similar, we color the output background 
@@ -12,11 +12,6 @@ L_DELTA_THRESHOLD=70
 
 # Space between pretty print inline members
 PRETTY_PRINT_PADDING=5
-
-[ -z $THEME ] &&
-    log_error $ID_COLOR "No theme detected. Set THEME before sourcing." && exit 1
-[ ! -f $COLORS_JSON ] &&
-    log_error $ID_COLOR "Required file $COLORS_JSON missing." && exit 1
 
 NO_COLOR=
 [ ! command -v bc > /dev/null 2>&1 ] &&
@@ -52,7 +47,7 @@ colorize_hex() {
 
 # Gets hex code from colors.json based on query
 get_color_hex() {
-    local ID="$ID:$ID_COLOR:$FUNCNAME"
+    local ID="$ID_COLOR:$FUNCNAME"
     local QUERY=$1
     case $QUERY in
         color*)
@@ -142,6 +137,9 @@ pretty_print_all() {
 }
 
 themecolor() {
+    local ID="$ID_COLOR:$FUNCNAME"
+    [ -z "$COLORS_JSON" ] &&
+        log_warn "$ID" "Not found: $COLORS_JSON." && return 1
     QUERY=$1
     [[ "$QUERY" =~ ^[0-9]+$ ]] && QUERY="color${QUERY}"
     [ -z $NO_COLOR ] && NO_COLOR=$2

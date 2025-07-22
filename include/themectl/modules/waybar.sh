@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 ID_WAYBAR="_ID:waybar"
 

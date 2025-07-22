@@ -71,6 +71,7 @@ directives (which are subject to change):
 * `themectl reload`: Rewrites all theme files and reloads relevant services
     * If any changes to `dunst` were detected, it will wait for log messages to
       timeout before initiating a reload.
+    * You can call `themectl reload <module>` to reload one service
 
 ## Theme Configuration
 The objects / directories here contain configs that will override service 

@@ -1,6 +1,6 @@
 # SKELETON FILE (not to be used directly)
 
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 #
 # themectl module
@@ -22,6 +22,8 @@
 #
 # You are also responsible for function validation (missing commands etc.)
 # 
+
+ID="$_ID:${MOD}"
 
 TC_${MOD}="$THEME_HOME/${mod}"
 ${MOD}_CONFIG_DIR="$XDG_CONFIG_DIR/${mod}"

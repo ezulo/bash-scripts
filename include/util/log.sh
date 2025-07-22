@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 #
-# This `themectl` utility writes logs to stderr
+# Logging for scripts, just source this file in the script
 # Also prints logs via notify-send (libnotify required)
 #
 # `--notify-only` flag will waive printing the log to `stderr`.
@@ -15,6 +15,8 @@
 # ```
 #
 
+UTIL_DIR=${UTIL_DIR:-"$XDG_CONFIG_HOME/scripts/include/util"}
+
 ###############################################################################
 ## Configuration ##############################################################
 ###############################################################################
@@ -23,11 +25,14 @@
 # Default log level (LL)
 #
 LL_DEFAULT=WARN
+# Override in file util/log/log-level
+LL=$LL_DEFAULT
+[ -f "$UTIL_DIR/log/log-level" ] && LL=$(cat "$UTIL_DIR/log/log-level")
 
 #
 # Notification daemon backend commands (empty variable for log level = no-op)
 #
-N_CMDS=(
+NOTIFY_CMDS=(
     "" # ------------------------------- TRACE - #
     "" # ------------------------------- DEBUG - #
     "notify-send --urgency=low" # ------ INFO -- #
@@ -39,16 +44,12 @@ N_CMDS=(
 ###############################################################################
 
 # Use these functions
-log_trace() { __log "TRACE" "$1" "$2" "$3"; }
-log_info()  { __log "INFO"  "$1" "$2" "$3"; }
-log_warn()  { __log "WARN"  "$1" "$2" "$3"; }
-log_error() { __log "ERROR" "$1" "$2" "$3"; }
-log_fatal() { __log "FATAL" "$1" "$2" "$3"; }
-log_debug() { __log "DEBUG" "$1" "$2" "$3"; }
-
-# Log Level
-LL=$LL_DEFAULT
-[ -f "$INCLUDE_DIR/log-level" ] && LL=$(cat "$INCLUDE_DIR/log-level")
+log_trace() { __log "TRACE" "$1" "$2" "$3" "$4"; }
+log_info()  { __log "INFO"  "$1" "$2" "$3" "$4"; }
+log_warn()  { __log "WARN"  "$1" "$2" "$3" "$4"; }
+log_error() { __log "ERROR" "$1" "$2" "$3" "$4"; }
+log_fatal() { __log "FATAL" "$1" "$2" "$3" "$4"; }
+log_debug() { __log "DEBUG" "$1" "$2" "$3" "$4"; }
 
 __log_level_value() {
     local OUT="-1"
@@ -65,13 +66,20 @@ __log_filter() {
 }
 
 __log() {
-    local LEVEL="$1" && shift && ! __log_filter $LEVEL && return 0
-    local ID="$1" && shift
-    local MSG="$1" && shift
+    local LEVEL="$1"    && shift && ! __log_filter $LEVEL && return 0
+    local ID="$1"       && shift
+    local MSG="$1"      && shift
+    local LOG_FILE="$1" && shift
     local SILENT=$([[ "$@" =~ "--silent " ]] && echo 1)
-    local N_CMD_IDX=$(__log_level_value "$LEVEL")
-    local N_CMD="${N_CMDS[$N_CMD_IDX]}"
-    [ ! -z "$N_CMD" ] && ${N_CMD} "$ID:$LEVEL" "$MSG"
-    [ -z "$SILENT" ] && echo "$ID:$FUNC:$LEVEL |" "$MSG" >&2
+    local LOG=("$ID:$LEVEL" "$MSG")
+    local LOG_ECHO=$(sed -e 's/\\n/ /g' <<< "${LOG[0]} | ${LOG[1]}")
+    local NOTIFY_CMD_IDX=$(__log_level_value "$LEVEL")
+    local NOTIFY_CMD="${NOTIFY_CMDS[$NOTIFY_CMD_IDX]}"
+    # Notify
+    [ ! -z "$NOTIFY_CMD" ] && ${NOTIFY_CMD} "${LOG[0]}" "${LOG[1]}"
+    # Log to file (if provided)
+    [ ! -z "$LOG_FILE" ] && echo "$LOG_ECHO" | tee -a "$LOG_FILE"
+    # Log to stderr (unless --silent)
+    [ -z "$SILENT" ] && echo "$LOG_ECHO" >&2
 }
 

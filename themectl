@@ -4,12 +4,15 @@ set -e
 export _ID="themectl"
 ID="$_ID"
 
-# Utilities
-INCLUDE_DIR="$XDG_CONFIG_HOME/scripts/include/themectl"
-source "$INCLUDE_DIR/util/log"
-source "$INCLUDE_DIR/util/file"
-source "$INCLUDE_DIR/util/color"
-source "$INCLUDE_DIR/util/css"
+# Utility sources
+UTIL_DIR="$XDG_CONFIG_HOME/scripts/include/util"
+source "$UTIL_DIR/log.sh"
+
+# Themectl sources
+THEMECTL_INCLUDE_DIR="$XDG_CONFIG_HOME/scripts/include/themectl"
+source "$THEMECTL_INCLUDE_DIR/file.sh"
+source "$THEMECTL_INCLUDE_DIR/color.sh"
+source "$THEMECTL_INCLUDE_DIR/css.sh"
 
 # Theme data
 THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme"}
@@ -25,12 +28,9 @@ check_opt() {
 
 print_available_themes() {
     NO_STYLE=$1
-    if [ ! -z "$NO_STYLE" ]; then
-        for theme in $AVAILABLE_THEMES; do
-            echo "$(basename $theme)"
-        done
-        exit 0
-    fi
+    [ ! -z "$NO_STYLE" ] &&
+        for theme in $AVAILABLE_THEMES; do echo "$(basename $theme)"; done &&
+        return
     echo "Choose from the following themes:" 
     echo "-----------------"
     for theme in $AVAILABLE_THEMES; do
@@ -58,14 +58,12 @@ write_theme_meta() {
 
 # Creates a new theme
 # Optionally, from a source theme, otherwise uses the default ($THEME_DEFAULT)
-create() {
+create_theme() {
     local ID="$_ID:$FUNCNAME"
     local NEW_THEME="$1" 
     local SRC_THEME="$2" # Optional
-    if [ -z $NEW_THEME ]; then
-        log_info "$ID_" "Theme name missing. Aborted."
-        return 1
-    fi
+    [ -z $NEW_THEME ] &&
+        log_error "$ID_" "Theme name missing. Aborted." && return 1
     local NEW_THEME_DIR="$THEME_HOME/$NEW_THEME"
     local SRC_THEME_DIR="$THEME_HOME/$SRC_THEME"
     [ -d "$NEW_THEME_DIR" ] &&
@@ -98,12 +96,13 @@ reload_all() {
 }
 load_modules() {
     local ID="$_ID:$FUNCNAME"
-    readarray -t ACTIVE_MODULES < "$INCLUDE_DIR/active-modules"
+    readarray -t ACTIVE_MODULES < "$THEMECTL_INCLUDE_DIR/active-modules"
     for MOD in "${ACTIVE_MODULES[@]}"; do
-        [ ! -f "$INCLUDE_DIR/modules/$MOD" ] &&
+        MOD_FILE="$THEMECTL_INCLUDE_DIR/modules/$MOD.sh"
+        [ ! -f "$MOD_FILE" ] &&
             log_warn $ID "Missing module: $MOD. Remove from active-modules" &&
             continue
-        source "$INCLUDE_DIR/modules/$MOD"
+        source "$MOD_FILE"
         log_debug $ID "Loaded $MOD"
     done
 }
@@ -111,51 +110,48 @@ load_modules() {
 THEME=
 main() {
     local ID="$_ID:$FUNCNAME"
-    COMMAND=$1
+    CMD=$1
     shift
     ARG="$@"
-    log_debug "$ID" "themectl command: $COMMAND"
+    log_debug "$ID" "themectl command: $CMD"
     log_debug "$ID" "themectl args: $ARG"
-    case "$COMMAND" in
+    case "$CMD" in
         "get")
             echo $THEME
             ;;
         "ls")
             print_available_themes nostyle
             ;;
-        "clear" | "color" | "create" | "reload" | "set")
-            ;;&
-        "color")
+        "color" | "colors")
             COLORS_JSON="$THEME_HOME/$THEME/colors.json"
             themecolor $ARG # Unquoted on purpose
             ;;
         "create")
-            create $ARG # Unquoted on purpose
+            create_theme $ARG # Unquoted on purpose
             ;;
         "set")
             THEME_NEW="$ARG"
-            [ $(check_opt $THEME_NEW) != 0 ] &&
+            [ ! $(check_opt $THEME_NEW) = 0 ] &&
                 log_error $ID "Invalid argument: $THEME_NEW" &&
                 print_available_themes &&
                 exit 1
             [ "$THEME_NEW" = "$THEME" ] &&
-                log_warn $ID \
-                    "Theme already set to:\n\ > $THEME\n\n\
-                    To reapply files, reload."+ &&
+                log_warn $ID "Theme already set to:\n > $THEME\n\n" &&
                 exit 0
             THEME=$THEME_NEW
             echo "$THEME" > "$THEME_HOME/current-theme"
             log_info "$ID" "Theme files updated for: $THEME"
             ;;&
         "clear")
-            clear_files "$THEME_HOME/current-theme"
             THEME=
             ;;&
         "clear" | "reload" | "set")
             THEME=${THEME:-"$THEME_DEFAULT"}
             COLORS_JSON="$THEME_HOME/$THEME/colors.json"
             TC_DIR="$THEME_HOME/$THEME" 
-            load_modules "$INCLUDE_DIR/active-modules"
+            [ "$CMD" = "reload" ] && [ ! -z "$ARG" ] && 
+                log_debug "$ID" "Running modules: $@" && ACTIVE_MODULES=("$@")
+            load_modules "$THEMECTL_INCLUDE_DIR/active-modules"
             clean_all && theme_all && reload_all && \
                 log_info $FUNCNAME "Theme loaded: $THEME"
             ;;
@@ -168,25 +164,19 @@ main() {
             log_fatal $ID "hello!"
             ;;
         *)
-            echo "Unknown command: $COMMAND"
+            echo "Unknown command: $CMD"
             ;;
     esac
 }
 
 
 # Checks
-if [ "${#ACTIVE_MODULES[@]}" = "0" ]; then
-    >&2 echo "No modules loaded. Nothing to do."
-    exit 1
-fi
-if [ ! -d "$THEME_HOME" ]; then
-    >&2 echo "No theme home found at ${THEME_HOME}. Exiting."
-    exit 1
-fi
-if [ $# -eq 0 ]; then
-	echo "No arguments supplied."
-	exit 1
-fi
+[ "${#ACTIVE_MODULES[@]}" = "0" ] &&
+    >&2 echo "No modules loaded. Nothing to do." && exit 1
+[ ! -d "$THEME_HOME" ] &&
+    >&2 echo "No theme home found at ${THEME_HOME}. Exiting." && exit 1
+[ $# -eq 0 ] &&
+    >&2 echo "No arguments supplied." && exit 1
 
 # Get current theme data
 [ ! -f "$THEME_HOME/current-theme" ] && touch "$THEME_HOME/current-theme"
