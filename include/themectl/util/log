@@ -48,10 +48,7 @@ log_debug() { __log "DEBUG" "$1" "$2" "$3"; }
 
 # Log Level
 LL=$LL_DEFAULT
-[ -f "$INCLUDE_DIR/log-level" ] &&
-    echo -n "Polling file for log level..." &&
-    LL=$(cat "$INCLUDE_DIR/log-level") &&
-    echo "set to $LL"
+[ -f "$INCLUDE_DIR/log-level" ] && LL=$(cat "$INCLUDE_DIR/log-level")
 
 __log_level_value() {
     local OUT="-1"
