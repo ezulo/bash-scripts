@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+#
+# A script for running a kitty subprocess to act as a graphical menu for input.
+# The subprocess will take in a simple string and outputs to terminal.
+# 
+# Take note of the windowrule on `class:kitty-prompt` in hyprland configs:
+# --> $XDG_CONFIG_HOME/hypr/hyprland-windowrules.conf
+#
+
+ID=${1:-"kitty-prompt"}
+MENU_PROMPT=${2:-"Submit input"}
+TMP="$(mktemp)"
+
+
+kitty \
+    --class kitty-prompt \
+    --override="map Esc close" \
+    --override="confirm_os_window_close 0" \
+    bash -c \
+    'echo '"$ID \| $MENU_PROMPT:"'; \
+    printf "%*s\n" "$(tput cols)" "" | tr " " "-"; \
+    read -r line; echo "$line" > '"$TMP" 2>/dev/null
+
+printf "%b" "$(cat $TMP)"
+
