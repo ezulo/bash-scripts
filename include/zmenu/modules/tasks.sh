@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 export ZEIT_DB="$XDG_CONFIG_HOME/zeit/zeit.db"
 ZEIT_CMD="$HOME/.local/bin/zeit"

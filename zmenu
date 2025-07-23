@@ -11,17 +11,17 @@ source "$INCLUDE_DIR/util"
 
 MODULE=$1
 if [ -z "$MODULE" ]; then
-    OPTS=$(ls -t --color=none -1 "$INCLUDE_DIR/modules")
+    OPTS=$(ls -t --color=none -1 "$INCLUDE_DIR/modules" | sed -e 's/\.sh//g')
     MODULE=$(d_read "$ID" "$OPTS" "Select a menu option")
     [ -z "$MODULE" ] && notify-send "$ID" "No module selected" && exit 1
 fi
 
-if [ ! -f "$INCLUDE_DIR/modules/$MODULE" ]; then
+if [ ! -f "$INCLUDE_DIR/modules/$MODULE.sh" ]; then
     notify-send "$ID:ERROR" "Module not found: $MODULE"
     exit 1
 fi
 
 # Invoke the module
 ID="zmenu:$MODULE"
-source "$INCLUDE_DIR/modules/$MODULE"
+source "$INCLUDE_DIR/modules/$MODULE.sh"
 

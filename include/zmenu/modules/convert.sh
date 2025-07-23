@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 OPTS=()
 for FILE in "$INCLUDE_DIR"/convert/*; do

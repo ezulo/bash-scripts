@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 # TODO: Allow selection of different monitors
 PRIMARY_MON="eDP-1"

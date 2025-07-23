@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 MENU_PROMPT="Select an audio sink"
 

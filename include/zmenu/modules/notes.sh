@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 # Const
 MENU_PROMPT="Enter / Select a note"

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/echo Please-Source
 
 MENU_PROMPT="What would you like to do, $USER?"
 
