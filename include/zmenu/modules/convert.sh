@@ -1,8 +1,8 @@
 #!/bin/echo Please-Source
 
 OPTS=()
-for FILE in "$INCLUDE_DIR"/convert/*; do
-    OPTS=( ${OPTS[@]} $(basename "$FILE") )
+for FILE in "$ZMENU_INCLUDE_DIR"/convert/*; do
+    OPTS=( ${OPTS[@]} $(basename "$FILE" | sed -e 's/\.sh//g') )
 done
 
 MENU_PROMPT_MAIN="Select a conversion"
@@ -67,7 +67,7 @@ for OPTS_I in "${OPTS[@]}"; do
                 "Enter $FROM_UNIT to convert to $TO_UNIT")
             ! [[ "$VAL" =~ $NUM_RE ]] &&
                 log_error $ID "Not a number: $VAL" && exit 1
-            source "$INCLUDE_DIR/convert/$OPT"
+            source "$ZMENU_INCLUDE_DIR/convert/$OPT.sh"
             OUT=$($OPT "$VAL")
             echo -n $OUT | wl-copy
             # Append abbreviation; don't do it for feet (alrady has notation)

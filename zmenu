@@ -9,7 +9,7 @@ ID="zmenu"
 UTIL_DIR=${UTIL_DIR:-"$XDG_CONFIG_HOME/scripts/include/util"}
 ZMENU_INCLUDE_DIR=${ZMENU_INCLUDE_DIR:-"$XDG_CONFIG_HOME/scripts/include/zmenu"}
 source "$UTIL_DIR/log.sh"
-source "$ZMENU_INCLUDE_DIR/util"
+source "$ZMENU_INCLUDE_DIR/util.sh"
 
 MODULE=$1
 [ -z "$MODULE" ] &&
