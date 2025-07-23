@@ -20,13 +20,12 @@ AV_THEMES="$($THEMECTL ls)"
 case $OPT in
     get)
         ID="$ID:get"
-        notify-send "$ID" "$($THEMECTL get)"
         ;;
     set)
         ID="$ID:set"
         THEME_OPT=$(d_read "$ID" "$AV_THEMES" "Select a theme to set.")
         if [ -z $(echo "$AV_THEMES" | grep "^$THEME_OPT\$") ]; then
-            notify-send "$ID" "Theme not found: $THEME_OPT"
+            log_error "$ID" "Theme not found: $THEME_OPT"
             exit 1
         fi
         $("$THEMECTL" set "$THEME_OPT")
@@ -45,12 +44,12 @@ case $OPT in
         if d_read_yes_no "$ID" "Duplicate an existing theme?"; then
             SRC_THEME=$(d_read "$ID" "$AV_THEMES" "Select a theme to duplicate")
             if [ -z $(echo "$AV_THEMES" | grep "^$SRC_THEME\$") ]; then
-                notify-send "$ID" "Theme not found: $THEME_OPT"
+                log_error "$ID" "Theme not found: $THEME_OPT"
                 exit 1
             fi
         fi
         NEW_THEME=$(k_read "$ID" "What would you like to name your new theme?")
-        [ -z "$NEW_THEME" ] && notify-send "$ID" "No theme selected." && exit 1
+        [ -z "$NEW_THEME" ] && log_error "$ID" "No theme selected." && exit 1
         if "$THEMECTL" create "$NEW_THEME" "$SRC_THEME"; then
             "$TERMINAL" "$EDITOR" "$THEME_HOME/$NEW_THEME"
         fi

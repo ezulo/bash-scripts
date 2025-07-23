@@ -27,13 +27,13 @@ case $OPT in
     [0-9][0-9]% | [0-9][0-9][0-9]% )
         SCALE_P=$(echo "$OPT" | tr -d "%")
         if [ "$SCALE_P" -lt "$SCALE_MIN" ] || [ "$SCALE_P" -gt "$SCALE_MAX" ]; then
-            notify-send $ID "Invalid scale: $SCALE"
+            log_error $ID "Invalid scale: $SCALE"
             exit 1
         fi
         SCALE=$(percent_to_decimal $SCALE_P)
         ;;
     *)
-        notify-send $ID "Invalid option: $OPT"
+        log_error $ID "Invalid option: $OPT"
         exit 1
         ;;
 esac

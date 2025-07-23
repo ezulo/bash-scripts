@@ -21,10 +21,6 @@ now
 -1:00
 -1:30"
 
-notify-log() {
-    notify-send "$ID:LOG" "$1"
-}
-
 poll_zeit() {
     if "$ZEIT_GET"; then
         return 0
@@ -45,22 +41,22 @@ if poll_zeit; then
     OUT=$("$ZEIT_CMD" finish)
     RET=$?
     [ ! $RET = 0 ] && exit 1
-    notify-log "zeit task finished:\n$Z_STRING"
+    log_info "$ID" "zeit task finished:\n$Z_STRING"
     if ! d_read_yes_no "$ID" "Start tracking a new task?"; then 
         exit 0; 
     fi
 fi
 
 PROJECT=$(d_read_cached "$ID" "projects" "[ _ / _ ] Enter a Project:")
-[ -z "$PROJECT" ] && notify-send "$ID:ERROR" "No project selected" && exit 1
+[ -z "$PROJECT" ] && log_error "$ID" "No project selected" && exit 1
 
 TASK=$(d_read_cached "$ID" "${PROJECT}/tasks" "[ $PROJECT / _ ] Enter a Task:")
-[ -z "$TASK" ] && notify-send "$ID:ERROR" "No task selected" && exit 1
+[ -z "$TASK" ] && log_error "$ID" "No task selected" && exit 1
 
 BEGIN=$(d_read "$ID" "$BEGIN_OPTS" "[ $PROJECT / $TASK ] Begin when?")
 [ -z "$BEGIN" ] && BEGIN="now"
 
 "$ZEIT_CMD" track --project "$PROJECT" --task "$TASK" --begin "$BEGIN"
-notify-send "$ID" \
+log_info "$ID"
     "New task started:\nProject: $PROJECT\nTask: $TASK\nBegin: $BEGIN"
 

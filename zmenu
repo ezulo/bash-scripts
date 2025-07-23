@@ -6,22 +6,24 @@
 # audio | convert | notes | scaling | session | zeit
 #
 ID="zmenu"
-INCLUDE_DIR=${ZMENU_INCLUDE:-"$XDG_CONFIG_HOME/scripts/include/zmenu"}
-source "$INCLUDE_DIR/util"
+UTIL_DIR=${UTIL_DIR:-"$XDG_CONFIG_HOME/scripts/include/util"}
+ZMENU_INCLUDE_DIR=${ZMENU_INCLUDE_DIR:-"$XDG_CONFIG_HOME/scripts/include/zmenu"}
+source "$UTIL_DIR/log.sh"
+source "$ZMENU_INCLUDE_DIR/util"
 
 MODULE=$1
 if [ -z "$MODULE" ]; then
-    OPTS=$(ls -t --color=none -1 "$INCLUDE_DIR/modules" | sed -e 's/\.sh//g')
+    OPTS=$(ls -t --color=none -1 "$ZMENU_INCLUDE_DIR/modules" | sed -e 's/\.sh//g')
     MODULE=$(d_read "$ID" "$OPTS" "Select a menu option")
-    [ -z "$MODULE" ] && notify-send "$ID" "No module selected" && exit 1
+    [ -z "$MODULE" ] && log_info "$ID" "No module selected" && exit 1
 fi
 
-if [ ! -f "$INCLUDE_DIR/modules/$MODULE.sh" ]; then
-    notify-send "$ID:ERROR" "Module not found: $MODULE"
+if [ ! -f "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh" ]; then
+    log_error "$ID" "Module not found: $MODULE"
     exit 1
 fi
 
 # Invoke the module
 ID="zmenu:$MODULE"
-source "$INCLUDE_DIR/modules/$MODULE.sh"
+source "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh"
 

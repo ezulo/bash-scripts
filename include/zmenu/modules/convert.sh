@@ -66,7 +66,7 @@ for OPTS_I in "${OPTS[@]}"; do
             VAL=$(d_read_cached "$ID" "$OPT" \
                 "Enter $FROM_UNIT to convert to $TO_UNIT")
             if ! [[ "$VAL" =~ $NUM_RE ]]; then
-                notify-send $ID "Not a number: $VAL"
+                log_error $ID "Not a number: $VAL"
                 exit 1
             fi
             source "$INCLUDE_DIR/convert/$OPT"
@@ -76,7 +76,7 @@ for OPTS_I in "${OPTS[@]}"; do
             if [ "$TO_UNIT_ABBREV" != "ft" ]; then
                 OUT="$OUT $TO_UNIT_ABBREV"
             fi
-            notify-send $ID \
+            log_info "$ID" \
                 "$VAL $FROM_UNIT to $TO_UNIT:\n$OUT\nCopied to clipboard."
             exit 0
             ;;
