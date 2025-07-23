@@ -24,10 +24,8 @@ OPT=$(d_read "$ID" "$SINKS" "$MENU_PROMPT")
 
 NEW_DEFAULT=$(echo $OPT | cut -d "." -f1)
 NAME=$(echo $OPT | cut -d "." -f2 | xargs)
-echo $NEW_DEFAULT
-if ! wpctl set-default $NEW_DEFAULT; then
-    exit 1
-fi
+! wpctl set-default $NEW_DEFAULT &&
+    log_error "$ID" "There was an error setting the sink: $?" && exit 1
 
 log_info "$ID" "Set default sink to:\n$NAME"
 

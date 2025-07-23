@@ -21,31 +21,21 @@ now
 -1:00
 -1:30"
 
-poll_zeit() {
-    if "$ZEIT_GET"; then
-        return 0
-    fi
+prompt_finish_task() {
+    local Z_TASK=$("$ZEIT_GET" task)
+    local Z_PROJ=$("$ZEIT_GET" proj)
+    local Z_TIME=$("$ZEIT_GET" time)
+    local Z_STRING="$Z_TASK on $Z_PROJ @ $Z_TIME"
+    ! d_read_yes_no "$ID" "[ $Z_PROJ / $Z_TASK ] Finish task?" && exit 1
+    OUT=$("$ZEIT_CMD" finish) &&
+    RET=$? &&
+    [ ! $RET = 0 ] && return 1
+    log_info "$ID" "zeit task finished:\n$Z_STRING"
+    d_read_yes_no "$ID" "Start tracking a new task?" && return 0; 
     return 1
 }
- 
-if poll_zeit; then
-    Z_TASK=$("$ZEIT_GET" task)
-    Z_PROJ=$("$ZEIT_GET" proj)
-    Z_TIME=$("$ZEIT_GET" time)
-    Z_STRING="$Z_TASK on $Z_PROJ @ $Z_TIME"
-    if ! d_read_yes_no "$ID" \
-        "[ $Z_PROJ / $Z_TASK ] Finish the current task?"; then
-        exit 1
-    fi
-    set +e 
-    OUT=$("$ZEIT_CMD" finish)
-    RET=$?
-    [ ! $RET = 0 ] && exit 1
-    log_info "$ID" "zeit task finished:\n$Z_STRING"
-    if ! d_read_yes_no "$ID" "Start tracking a new task?"; then 
-        exit 0; 
-    fi
-fi
+
+"$ZEIT_GET" && { prompt_finish_task || exit 0; }
 
 PROJECT=$(d_read_cached "$ID" "projects" "[ _ / _ ] Enter a Project:")
 [ -z "$PROJECT" ] && log_error "$ID" "No project selected" && exit 1
@@ -56,7 +46,7 @@ TASK=$(d_read_cached "$ID" "${PROJECT}/tasks" "[ $PROJECT / _ ] Enter a Task:")
 BEGIN=$(d_read "$ID" "$BEGIN_OPTS" "[ $PROJECT / $TASK ] Begin when?")
 [ -z "$BEGIN" ] && BEGIN="now"
 
-"$ZEIT_CMD" track --project "$PROJECT" --task "$TASK" --begin "$BEGIN"
-log_info "$ID"
+"$ZEIT_CMD" track --project "$PROJECT" --task "$TASK" --begin "$BEGIN" &&
+log_info "$ID" \
     "New task started:\nProject: $PROJECT\nTask: $TASK\nBegin: $BEGIN"
 

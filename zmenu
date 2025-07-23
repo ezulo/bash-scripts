@@ -12,16 +12,15 @@ source "$UTIL_DIR/log.sh"
 source "$ZMENU_INCLUDE_DIR/util"
 
 MODULE=$1
-if [ -z "$MODULE" ]; then
-    OPTS=$(ls -t --color=none -1 "$ZMENU_INCLUDE_DIR/modules" | sed -e 's/\.sh//g')
-    MODULE=$(d_read "$ID" "$OPTS" "Select a menu option")
+[ -z "$MODULE" ] &&
+    OPTS=$(
+        ls -t --color=none -1 "$ZMENU_INCLUDE_DIR/modules" | sed -e 's/\.sh//g'
+    ) &&
+    MODULE=$(d_read "$ID" "$OPTS" "Select a menu option") &&
     [ -z "$MODULE" ] && log_info "$ID" "No module selected" && exit 1
-fi
 
-if [ ! -f "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh" ]; then
-    log_error "$ID" "Module not found: $MODULE"
-    exit 1
-fi
+[ ! -f "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh" ] &&
+    log_error "$ID" "Module not found: $MODULE" && exit 1
 
 # Invoke the module
 ID="zmenu:$MODULE"
