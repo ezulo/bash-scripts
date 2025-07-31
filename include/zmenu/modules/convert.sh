@@ -63,12 +63,11 @@ for OPTS_I in "${OPTS[@]}"; do
             TO_UNIT_ABBREV=$(cut -d 2 -f2 <<< "$OPT")
             FROM_UNIT=$(unit_to_string "$FROM_UNIT_ABBREV")
             TO_UNIT=$(unit_to_string "$TO_UNIT_ABBREV")
-            VAL=$(d_read_cached "$ID" "$OPT" \
-                "Enter $FROM_UNIT to convert to $TO_UNIT")
+            VAL=$( d_read_cached "$ID" "$OPT" "Enter $FROM_UNIT to convert to $TO_UNIT")
             ! [[ "$VAL" =~ $NUM_RE ]] &&
                 log_error $ID "Not a number: $VAL" && exit 1
             source "$ZMENU_INCLUDE_DIR/convert/$OPT.sh"
-            OUT=$($OPT "$VAL")
+            OUT=$($OPT "$VAL") && d_cache_append "$ID" "$OPT" "$VAL"
             echo -n $OUT | wl-copy
             # Append abbreviation; don't do it for feet (alrady has notation)
             [ "$TO_UNIT_ABBREV" != "ft" ] && OUT="$OUT $TO_UNIT_ABBREV"

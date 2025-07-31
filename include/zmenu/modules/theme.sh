@@ -43,7 +43,6 @@ case $OPT in
             SRC_THEME=$(d_read "$ID" "$AV_THEMES" "Select a source theme") &&
             [ -z $(echo "$AV_THEMES" | grep "^$SRC_THEME\$") ] &&
                 log_error "$ID" "Theme not found: $THEME_OPT" && exit 1
-        fi
         NEW_THEME=$(k_read "$ID" "What would you like to name your new theme?")
         [ -z "$NEW_THEME" ] && log_error "$ID" "No theme selected." && exit 1
         "$THEMECTL" create "$NEW_THEME" "$SRC_THEME" &&
