@@ -20,14 +20,14 @@ wofi_theme() {
 		log_warn $ID "$COLORS_JSON not found. Ignoring wofi colors."
     for TC_FILE in "$TC_WOFI"/*; do
         local FILE_OUT="$OUT_DIR/$(basename $TC_FILE)"
-        sed 's|{_COLORS_CSS_}|'$OUT_COLORS_CSS'|' "$TC_FILE" >> "$FILE_OUT"
+        sed 's|{_COLORS_CSS_}|'$OUT_COLORS_CSS'|g' "$TC_FILE" >> "$FILE_OUT"
     done
 }
 
 wofi_clean() {
     local ID="$ID_WOFI:clean"
+    log_info $ID "WOFI CLEAN"
     clear_dir "$WOFI_CONFIG_DIR/theme/"
-    cp -r ${TC_DEFAULT}/wofi/* "$WOFI_CONFIG_DIR/theme/"
 }
 
 wofi_reload() {
