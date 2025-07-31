@@ -15,6 +15,6 @@ divide_by_thousand() {
 mm2in() {
     local MM=$1
     [ -z $MM ] && return
-    divide_by_thousand $(bc <<< "($MM * 1000) / 25.4") &&
+    divide_by_thousand $(bc <<< "($MM * 1000) / 25.4")
 }
 
