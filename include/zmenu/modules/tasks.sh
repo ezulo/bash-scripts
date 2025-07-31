@@ -4,6 +4,9 @@ export ZEIT_DB="$XDG_CONFIG_HOME/zeit/zeit.db"
 ZEIT_CMD="$HOME/.local/bin/zeit"
 ZEIT_GET="$XDG_CONFIG_HOME/scripts/zeit-get"
 
+! [ -f "$ZEIT_CMD" ] && log_error "zeit not found: $ZEIT_CMD"
+! [ -f "$ZEIT_GET" ] && log_error "zeit-get not found: $ZEIT_GET"
+
 BEGIN_OPTS="\
 now
 +1:30
@@ -40,13 +43,17 @@ prompt_finish_task() {
 PROJECT=$(d_read_cached "$ID" "projects" "[ _ / _ ] Enter a Project:")
 [ -z "$PROJECT" ] && log_error "$ID" "No project selected" && exit 1
 
+
 TASK=$(d_read_cached "$ID" "${PROJECT}/tasks" "[ $PROJECT / _ ] Enter a Task:")
 [ -z "$TASK" ] && log_error "$ID" "No task selected" && exit 1
 
 BEGIN=$(d_read "$ID" "$BEGIN_OPTS" "[ $PROJECT / $TASK ] Begin when?")
 [ -z "$BEGIN" ] && BEGIN="now"
 
+
 "$ZEIT_CMD" track --project "$PROJECT" --task "$TASK" --begin "$BEGIN" &&
-log_info "$ID" \
-    "New task started:\nProject: $PROJECT\nTask: $TASK\nBegin: $BEGIN"
+    d_cache_append "$ID" "projects" "$PROJECT" &&
+    d_cache_append "$ID" "$PROJECT/tasks" "$PROJECT" &&
+    log_info "$ID" \
+        "New task started:\nProject: $PROJECT\nTask: $TASK\nBegin: $BEGIN"
 
