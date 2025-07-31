@@ -26,7 +26,6 @@ wofi_theme() {
 
 wofi_clean() {
     local ID="$ID_WOFI:clean"
-    log_info $ID "WOFI CLEAN"
     clear_dir "$WOFI_CONFIG_DIR/theme/"
 }
 
