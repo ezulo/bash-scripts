@@ -6,6 +6,5 @@ in2ft() {
     printf "%b'%b\"\n" \
         $(bc <<< "$IN / 12") \
         $(bc <<< "$IN % 12")
-    cache_append "$FUNCNAME" "$IN"
 }
 

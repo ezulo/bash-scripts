@@ -5,6 +5,5 @@ in2mm() {
     [ -z $IN ] && return
     printf "%b\n" \
         $(bc <<< "$IN * 25.4")
-    cache_append "$FUNCNAME" "$IN"
 }
 
