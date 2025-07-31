@@ -7,6 +7,7 @@ BACKEND=/usr/bin/bc
 
 PROMPT="Enter a calculation"
 CALC=$(d_read_cached "$ID" "history" "$PROMPT" "no_write")
+[ -z "$CALC" ] && exit 1
 
 RES=$(echo "$CALC" | "$BACKEND" 2>&1)
 
