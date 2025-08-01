@@ -11,11 +11,13 @@ ID_COLOR="$_ID:util:color"
 L_DELTA_THRESHOLD=70
 
 # Space between pretty print inline members
-PRETTY_PRINT_PADDING=5
+INLINE_PADDING=5
 
 NO_COLOR=
+NO_FMT=
 [ ! command -v bc > /dev/null 2>&1 ] &&
-    log_warn $ID_COLOR "bc not found. Color output disabled." && NO_COLOR=1
+    log_warn $ID_COLOR "bc not found. Color output disabled." &&
+    NO_COLOR=true
 
 # Helper function to calculate perceived luminance, used for colorizing output
 rgb_luminance() {
@@ -70,8 +72,7 @@ get_color_hex() {
 print_color() {
     QUERY=$1
     KEY=$2
-    NO_COLOR=$3
-    NEWLINE=$4
+    NEWLINE=$3
     [ -z "$KEY" ] && KEY="$QUERY"
     COLOR_HEX=$(get_color_hex $1)
     [ -z $NO_COLOR ] && COLOR_HEX=$(colorize_hex "$COLOR_HEX")
@@ -90,7 +91,7 @@ bg_luminance() {
 }
 
 string_width() {
-    echo "$1" |  sed 's/\x1B\[[0-9;]*[a-zA-Z]//g' | wc -L
+    echo "$1" | sed 's/ //g' | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g' | wc -L
 }
 
 colors_max_width() {
@@ -104,31 +105,27 @@ colors_max_width() {
 }
 
 pretty_print_align_hex() {
-    local COLOR=$1
-    local COLOR_MW=$2
-    WIDTH=$(string_width "$COLOR")
-    DELTA=$((COLOR_MW - WIDTH))
-    local IFS=' '
-    [[ $DELTA -gt 0 ]] &&
-        read -ra COLOR_P <<< "$COLOR" &&
-        printf "%b%*s%b" "${COLOR_P[0]}" "$((DELTA + 1))" "${COLOR_P[1]}" \
-        ||
-        printf "%b" "${COLOR}"
+    local COLOR=$(echo "$1" | sed 's/ //g')
+    local MAX_W=$2
+    local WIDTH=$(string_width "$COLOR")
+    local PAD_W=$((MAX_W - WIDTH + 1))
+    printf -v PADDING '%0.s-' $(seq 1 $PAD_W)
+    local IFS=":" && read -ra COLOR_P <<< "$COLOR"
+    printf '%s: %s %s' ${COLOR_P[0]} ${PADDING} ${COLOR_P[1]}
 }
 
 pretty_print_all() {
-    local COLOR_COLUMNS="$1"
-    shift
+    local COLOR_COLUMNS="$1" && shift
     local COLORS=("$@")
     # Get max width
-    COLORS_MW=$(colors_max_width "${COLORS[@]}")
-    MAX_I=$((${#COLORS[@]} / $COLOR_COLUMNS))
+    local COLORS_MW=$(colors_max_width "${COLORS[@]}")
+    local MAX_I=$((${#COLORS[@]} / $COLOR_COLUMNS))
     for i in $(eval echo {0..$((MAX_I - 1))}); do
         for j in $(eval echo {0..$(($COLOR_COLUMNS - 1))}); do
-            IDX=$((i + j * MAX_I))
-            COLOR="${COLORS[$IDX]}"
-            WIDTH=$(string_width "$COLOR")
-            SPACES=$(($((COLORS_MW - WIDTH)) + PRETTY_PRINT_PADDING))
+            local IDX=$((i + j * MAX_I))
+            local COLOR="${COLORS[$IDX]}"
+            local WIDTH=$(string_width "$COLOR")
+            local SPACES=$(($((COLORS_MW - WIDTH)) + INLINE_PADDING))
             pretty_print_align_hex "$COLOR" "$COLORS_MW"
             printf '%*s' "$SPACES" ''
         done
@@ -136,32 +133,46 @@ pretty_print_all() {
     done
 }
 
+print_all() {
+    local COLORS=("$@")
+    for COLOR in "${COLORS[@]}"; do
+        echo "$COLOR" | sed 's/ //g'
+    done
+}
+
 themecolor() {
     local ID="$ID_COLOR:$FUNCNAME"
     [ -z "$COLORS_JSON" ] &&
         log_warn "$ID" "Not found: $COLORS_JSON." && return 1
-    QUERY=$1
+    local QUERY=$1 && shift
+    for ARG in "$@"; do
+        [ "$ARG" = "no_color" ] && NO_COLOR=true
+        [ "$ARG" = "no_fmt"   ] && NO_FMT=true
+    done
     [[ "$QUERY" =~ ^[0-9]+$ ]] && QUERY="color${QUERY}"
-    [ -z $NO_COLOR ] && NO_COLOR=$2
+    local COLORS=()
+    local COLORS_SPECIAL=()
     case "$QUERY" in
         "all")
-            COLORS=()
-            COLORS_SPECIAL=()
             for i in {0..15}; do
                 QUERY="color${i}"
-                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "$NO_COLOR" "")
+                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "")
                 COLORS+=("$COLOR_OUT")
             done
             SPEC_KEYS=$(jq -r '.special | keys[]' "$COLORS_JSON")
             while IFS="\r" read QUERY; do
-                COLOR_OUT=$(print_color "$QUERY" "$QUERY" "$NO_COLOR" "")
-                COLORS_SPECIAL+=("$COLOR_OUT")
+                local COLOR_OUT=$(print_color "$QUERY" "$QUERY" "")
+                local COLORS_SPECIAL+=("$COLOR_OUT")
             done <<< $SPEC_KEYS
+            ! [ -z "$NO_FMT" ] && 
+                print_all "${COLORS[@]}" &&
+                print_all "${COLORS_SPECIAL[@]}" &&
+                return 0
             pretty_print_all 2 "${COLORS[@]}"
             pretty_print_all 1 "${COLORS_SPECIAL[@]}"
             ;;
         *)
-            print_color "$QUERY" "" "$NO_COLOR" "1"
+            print_all "$(print_color $QUERY $QUERY '')"
             ;;
     esac
 }

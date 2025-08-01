@@ -76,7 +76,7 @@ __log() {
     local NOTIFY_CMD_IDX=$(__log_level_value "$LEVEL")
     local NOTIFY_CMD="${NOTIFY_CMDS[$NOTIFY_CMD_IDX]}"
     # Notify
-    [ ! -z "$NOTIFY_CMD" ] && ${NOTIFY_CMD} "${LOG[0]}" "${LOG[1]}"
+    [ ! -z "$NOTIFY_CMD" ] && ($NOTIFY_CMD "${LOG[0]}" "${LOG[1]}")
     # Log to file (if provided)
     [ ! -z "$LOG_FILE" ] && echo "$LOG_ECHO" | tee -a "$LOG_FILE"
     # Log to stderr (unless --silent)

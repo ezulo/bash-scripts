@@ -56,13 +56,12 @@ The bulk of the theming work is performed by `themectl`. It has a handful of
 directives (which are subject to change):
 
 * `themectl clear`: unsets the current theme (reverts to system defaults)
-* `themectl color <query> [no_color]`: pretty prints theme color(s) to terminal
+* `themectl color <query> [no_color] [no_fmt]`: pretty prints theme color(s) to terminal
     * The query `all` will prettyprint all available keys + colors
     * You may query by 8/16 color codes (0 -> 15) or by any key under "special"
       in the current theme's `colors.json` file.
-    * It will colorize background / foreground of text based on a perceived
-      luminance comparison of the color queried against the background color.
-      Pass the `no_color` option to disable coloration.
+    * `no_color` disables output coloration.
+    * `no_fmt` disables pretty formatting when using the `all` query.
 * `themectl create <themename> [src_theme]`: Creates a new theme directory
     * `src_theme` can be used to duplicate an existing theme
 * `themectl get`: Returns the name of the current theme.
