@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:notes"
+
 # Const
 MENU_PROMPT="Enter / Select a note"
 

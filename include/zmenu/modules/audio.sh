@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:audio"
+
 MENU_PROMPT="Select an audio sink"
 
 # get list of sinks

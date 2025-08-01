@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:calc"
+
 # Backend can be changed, though usage below must be adapted
 BACKEND=/usr/bin/bc
 ! command -v "$BACKEND" > /dev/null &&

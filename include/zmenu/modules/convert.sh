@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:convert"
+
 OPTS=()
 for FILE in "$ZMENU_INCLUDE_DIR"/convert/*; do
     OPTS=( ${OPTS[@]} $(basename "$FILE" | sed -e 's/\.sh//g') )

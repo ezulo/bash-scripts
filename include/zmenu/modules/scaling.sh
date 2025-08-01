@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:scaling"
+
 # TODO: Allow selection of different monitors
 PRIMARY_MON="eDP-1"
 

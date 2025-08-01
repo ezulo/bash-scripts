@@ -5,7 +5,7 @@
 # Supported functions:
 # audio | convert | notes | scaling | session | zeit
 #
-ID="zmenu"
+_ID="zmenu"
 UTIL_DIR=${UTIL_DIR:-"$XDG_CONFIG_HOME/scripts/include/util"}
 ZMENU_INCLUDE_DIR=${ZMENU_INCLUDE_DIR:-"$XDG_CONFIG_HOME/scripts/include/zmenu"}
 source "$UTIL_DIR/log.sh"
@@ -23,6 +23,5 @@ MODULE=$1
     log_error "$ID" "Module not found: $MODULE" && exit 1
 
 # Invoke the module
-ID="zmenu:$MODULE"
 source "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh"
 

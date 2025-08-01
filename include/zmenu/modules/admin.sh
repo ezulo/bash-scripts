@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:admin"
+
 OPTS="\
 clear zmenu cache"
 

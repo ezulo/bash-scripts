@@ -1,5 +1,7 @@
 #!/bin/echo Please-Source
 
+ID="$_ID:session"
+
 MENU_PROMPT="What would you like to do, $USER?"
 
 OPTS="\
