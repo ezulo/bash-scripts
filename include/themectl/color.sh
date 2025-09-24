@@ -29,7 +29,7 @@ rgb_luminance() {
 # Colorizes color hex (#000000 to #ffffff)
 colorize_hex() {
     local HEX=$1 #e.g. "#012345"
-    local HEX_REGEX="^#[0-9|a-f]+$"
+    local HEX_REGEX='#[0-9|a-f|A-F]+$'
     [[ ! $HEX =~ $HEX_REGEX ]] || [ $(echo "$HEX" | wc -L) -ne 7 ] &&
         echo -ne "${HEX}[INVALID]" && return 1
     local R=$((16#"${HEX:1:2}"))
