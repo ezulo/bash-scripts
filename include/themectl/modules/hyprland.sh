@@ -16,6 +16,16 @@ OUT_DIR="$HYPR_CONFIG_DIR/theme"
 [ ! -d "$TMP_DIR" ] && mkdir "$TMP_DIR"
 [ ! -d "$OUT_DIR" ] && mkdir "$OUT_DIR"
 
+# Checks if lid is closed; disables primary monitor if so
+LID_SWITCH_MON="eDP-1"
+STATE_FILE="/proc/acpi/button/lid/LID/state"
+handle_lid_switch() {
+    STATE=$(cat "$STATE_FILE" | cut -d':' -f2 | xargs) || return 1
+    [ "$STATE" = "closed" ] && 
+        hyprctl keyword monitor "$LID_SWITCH_MON, disable" || return 1
+    log_info "$ID" "lid switch handled"
+}
+
 # Commits our config files to a tmp directory, because hyprland spams errors if
 # you try to directly write them before reloading. We commit them during reload.
 hyprland_theme() {
@@ -37,6 +47,7 @@ hyprland_reload() {
     commit_dir "$TC_HYPRLAND" "$OUT_DIR"
     clear_dir "$TMP_DIR"
     hyprctl reload > /dev/null 2>&1
+    handle_lid_switch
 }
 
 hyprland_clean() {
