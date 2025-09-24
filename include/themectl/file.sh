@@ -25,11 +25,7 @@ commit_dir() {
     log_trace "$ID" "invoked: commit_dir $SRC $DST"
     [ ! -d "$SRC" ] && 
         log_trace "$ID" "Source directory [ $SRC ] not found" && return 1 
-    [ ! -d $"$DST" ] &&
-        log_trace "$ID" "$SRC -> $DST; destination not found" && return 1
-    for file in ${SRC}/*; do
-        commit_file "${file}" "${DST}/$(basename $file)"
-    done
+    cp -r "$SRC"/* "$DST"
 }
 
 commit_file() {
