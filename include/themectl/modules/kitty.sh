@@ -47,7 +47,7 @@ kitty_theme() {
     [ -d "$TC_DIR" ] &&
         cp -r "$TC_DIR/kitty/"* "$KITTY_CONFIG_DIR/theme/" \
         ||
-        log_warn $ID "Kitty config not found at $TC_DIR. Using defaults." &&
+        #log_warn $ID "Kitty config not found at $TC_DIR. Using defaults." &&
         cp -r ${TC_DEFAULT}/kitty/* "$KITTY_CONFIG_DIR/theme/"
     __colors_json_to_kitty_conf "$COLORS_JSON" "$OUT_COLORS_CONF"
 }
