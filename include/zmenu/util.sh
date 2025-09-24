@@ -3,7 +3,7 @@
 # Maximum number of cached entries
 CACHE_MAX_SZ=30
 
-DMENU_CMD="wofi --dmenu"
+DMENU_CMD="wofi --dmenu --cache-file=/dev/null"
 KPROMPT_CMD="kitty-prompt"
 
 d_read() {
@@ -79,7 +79,7 @@ _cache_append() {
     ! [ -f "$FILE" ] &&
         mkdir -p "$(dirname $FILE)" && touch "$FILE"
     local CACHE_DATA=$(
-        _cache_read_n "$CACHE_ID" "$(($CACHE_MAX_SZ - 1))" | sed "/^$OUT\$/d"
+        _cache_read_n "$CACHE_ID" "$(($CACHE_MAX_SZ - 1))" | sed "\|^$OUT\$|d"
     )
     echo "$OUT" >  "$FILE"
     echo "$CACHE_DATA"   >> "$FILE"
