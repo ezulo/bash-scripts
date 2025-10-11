@@ -22,8 +22,9 @@ done <<< "$SINKS_TRIM"
 
 OPT=$(d_read "$ID" "$SINKS" "$MENU_PROMPT")
 
-# set new default
+[ -z "$OPT" ] && exit 1
 
+# set new default
 NEW_DEFAULT=$(echo $OPT | cut -d "." -f1)
 NAME=$(echo $OPT | cut -d "." -f2 | xargs)
 ! wpctl set-default $NEW_DEFAULT &&
