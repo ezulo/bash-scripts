@@ -3,14 +3,17 @@
 # Maximum number of cached entries
 CACHE_MAX_SZ=30
 
-DMENU_CMD="wofi --dmenu --cache-file=/dev/null"
+#DMENU_CMD="wofi --dmenu --cache-file=/dev/null"
+DMENU_CMD="$HOME/.local/bin/wmenu-wrapper"
 KPROMPT_CMD="kitty-prompt"
 
 d_read() {
     local ID="$1"
     local OPTS="$2"
     local PROMPT="$3"
-    echo -e "$OPTS" | $DMENU_CMD -p "$ID | $PROMPT"
+    [ -z $PROMPT ] && PROMPT="$ID" || PROMPT="$ID | $PROMPT"
+    echo -e "$OPTS" | $DMENU_CMD -p "$PROMPT" && return 0
+    return 1
 }
 
 d_read_cached() {
@@ -19,7 +22,8 @@ d_read_cached() {
     local PROMPT="$3"
     local APPEND="$4" # "append" option to write to cache regardless of errors
     OPTS=$(_cache_read $CACHE_ID)
-    OUT=$(echo -e "$OPTS" | $DMENU_CMD -p "$ID | $PROMPT" | xargs)
+    [ -z $PROMPT ] && PROMPT="$ID" || PROMPT="$ID | $PROMPT"
+    OUT=$(echo -e "$OPTS" | $DMENU_CMD -p "$PROMPT" | xargs)
     [ "$APPEND" = "append" ] && _cache_append "$ID/$CACHE_ID" "$OUT"
     printf "%b" "$OUT"
 }
@@ -57,6 +61,14 @@ k_read() {
     local TMP="/tmp/t_read_temp"
     rm -f "$TMP"
     "$KPROMPT_CMD" "$ID" "$K_PROMPT"
+}
+
+k_read_silent() {
+    local ID="$1"
+    local K_PROMPT="$2"
+    local TMP="/tmp/t_read_temp"
+    rm -f "$TMP"
+    "$KPROMPT_CMD" "$ID" "$K_PROMPT" "-s"
 }
 
 _cache_read_n() {
