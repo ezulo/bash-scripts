@@ -76,7 +76,9 @@ print_color() {
     [ -z "$KEY" ] && KEY="$QUERY"
     COLOR_HEX=$(get_color_hex $1)
     [ -z $NO_COLOR ] && COLOR_HEX=$(colorize_hex "$COLOR_HEX")
-    OUT=$(echo -n "${KEY}: ")"${COLOR_HEX}"
+    [ ! -z $NO_FMT ] &&
+        OUT=$(echo -n "${COLOR_HEX}") ||
+        OUT=$(echo -n "${KEY}: ")"${COLOR_HEX}"
     [ ! -z $NEWLINE ] && OUT="$OUT\n"
     printf "%b" "$OUT"
 }
