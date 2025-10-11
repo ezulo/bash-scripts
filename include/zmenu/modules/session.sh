@@ -2,8 +2,6 @@
 
 ID="$_ID:session"
 
-MENU_PROMPT="What would you like to do, $USER?"
-
 OPTS="\
 logout
 lock
@@ -11,7 +9,7 @@ sleep
 shutdown
 reboot"
 
-OPT=$(d_read "$ID" "$OPTS" "$MENU_PROMPT")
+OPT=$(d_read "$ID" "$OPTS")
 
 case $OPT in
     "logout")

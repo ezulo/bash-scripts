@@ -14,7 +14,7 @@ export THEME=$(cat "$THEME_HOME/current-theme")
 TERMINAL="kitty"
 EDITOR="nvim"
 
-OPT=$(d_read "$ID" "$OPTS" "Select a themectl operation.")
+OPT=$(d_read "$ID" "$OPTS")
 [ -z "$OPT" ] && exit 1
 
 AV_THEMES="$($THEMECTL ls)"
