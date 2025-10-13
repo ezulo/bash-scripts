@@ -5,11 +5,11 @@ TC_WMENU="$TC_DIR/wmenu"
 
 [ -f "$TC_WMENU/config" ] &&
     CONFIG_FILE="$TC_WMENU/config" ||
-    CONFIG_FILE="$TC_SKELETON/config"
+    CONFIG_FILE="$TC_DEFAULT/wmenu/config"
 
 [ -f "$TC_WMENU/flags" ] &&
     FLAGS_FILE="$TC_WMENU/flags" ||
-    FLAGS_FILE="$TC_SKELETON/flags"
+    FLAGS_FILE="$TC_DEFAULT/wmenu/flags"
 
 WMENU_OUT="$HOME/.local/bin/wmenu-wrapper"
 WMENU_RUN_OUT="$HOME/.local/bin/wmenu-run-wrapper"
