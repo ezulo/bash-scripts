@@ -18,7 +18,7 @@ kitty \
     --override="map Esc close" \
     --override="confirm_os_window_close 0" \
     bash -c \
-    'echo '"$ID \| $MENU_PROMPT:"'; \
+    'echo '"$ID \| $MENU_PROMPT"'; \
     printf "%*s\n" "$(tput cols)" "" | tr " " "-"; \
     read -r line; echo "$line" > '"$TMP" 2>/dev/null
 
