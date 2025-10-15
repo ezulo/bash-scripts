@@ -83,6 +83,20 @@ create_theme() {
     return 0
 }
 
+# Disables/Enables wallpapers
+# Simply renames theme "wallpapers" directory to "_wallpapers" and vice versa
+toggle_wallpapers() {
+    local ID="$_ID:$FUNCNAME"
+    local ENABLED_DIR="$THEME_HOME/$THEME/wallpapers"
+    local DISABLED_DIR="$THEME_HOME/$THEME/_wallpapers"
+    [ -d "$ENABLED_DIR" ] && mv "$ENABLED_DIR" "$DISABLED_DIR" && 
+        log_info "$ID" "Wallpapers disabled for theme \"$THEME\"." && return 0
+    [ -d "$DISABLED_DIR" ] && mv "$DISABLED_DIR" "$ENABLED_DIR"
+        log_info "$ID" "Wallpapers enabled for theme \"$THEME\"." && return 0
+    log_info "$ID" "Wallpapers directory not found at $ENABLED_DIR or $DISABLED_DIR"
+    return 1
+}
+
 ACTIVE_MODULES=
 clean_all() {
     for MOD in "${ACTIVE_MODULES[@]}"; do ${MOD}_clean; done
@@ -95,7 +109,9 @@ reload_all() {
 }
 load_modules() {
     local ID="$_ID:$FUNCNAME"
-    readarray -t ACTIVE_MODULES < "$THEMECTL_INCLUDE_DIR/active-modules"
+    [ $# -eq 0 ] &&
+        readarray -t ACTIVE_MODULES < "$THEMECTL_INCLUDE_DIR/active-modules" ||
+        ACTIVE_MODULES=($@)
     for MOD in "${ACTIVE_MODULES[@]}"; do
         MOD_FILE="$THEMECTL_INCLUDE_DIR/modules/$MOD.sh"
         [ ! -f "$MOD_FILE" ] &&
@@ -150,7 +166,7 @@ main() {
             TC_DIR="$THEME_HOME/$THEME" 
             [ "$CMD" = "reload" ] && [ ! -z "$ARG" ] && 
                 log_debug "$ID" "Running modules: $@" && ACTIVE_MODULES=("$@")
-            load_modules "$THEMECTL_INCLUDE_DIR/active-modules"
+            load_modules
             clean_all && theme_all && reload_all && \
                 log_info $FUNCNAME "Theme loaded: $THEME"
             ;;
@@ -161,6 +177,9 @@ main() {
             log_warn $ID "hello!"
             log_error $ID "hello!"
             log_fatal $ID "hello!"
+            ;;
+        "toggle-wallpapers")
+            toggle_wallpapers && load_modules "hyprpaper" && hyprpaper_reload
             ;;
         *)
             echo "Unknown command: $CMD"
