@@ -7,6 +7,8 @@ CACHE_MAX_SZ=30
 DMENU_CMD="$HOME/.local/bin/wmenu-wrapper"
 KPROMPT_CMD="kitty-prompt"
 
+PATH="$PATH:$HOME/.config/scripts"
+
 d_read() {
     local ID="$1"
     local OPTS="$2"
@@ -34,7 +36,7 @@ d_read_yes_no() {
     local DEFAULT="[y|Y]"
     local OPTS="[Yes]\n[no]"
     [[ "$3" =~ ^[n|N] ]] && DEFAULT="[n|N]" && OPTS="[No]\n[yes]"
-    OUT=$(echo -e "$OPTS" | $DMENU_CMD --insensitive -p "$ID | $PROMPT" | xargs)
+    OUT=$(echo -e "$OPTS" | $DMENU_CMD -p "$ID | $PROMPT" | xargs)
     RET=$?
     [ "$RET" != 0 ] && exit 1
     RE='^\['$DEFAULT'.*\]$'
@@ -58,16 +60,12 @@ d_cache_append() {
 k_read() {
     local ID="$1"
     local K_PROMPT="$2"
-    local TMP="/tmp/t_read_temp"
-    rm -f "$TMP"
     "$KPROMPT_CMD" "$ID" "$K_PROMPT"
 }
 
 k_read_silent() {
     local ID="$1"
     local K_PROMPT="$2"
-    local TMP="/tmp/t_read_temp"
-    rm -f "$TMP"
     "$KPROMPT_CMD" "$ID" "$K_PROMPT" "-s"
 }
 
