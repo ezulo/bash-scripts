@@ -12,7 +12,7 @@ OPTS_FILE_BACKUP="${1:-$ZMENU_INCLUDE_DIR/launcher/options_backup}"
 
 trim_whitespace() {
     while IFS= read -r LINE; do
-        echo "$LINE" | sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*\$//g'
+        echo "$LINE" | awk '{$1=$1;print}'
     done
 }
 
@@ -48,38 +48,43 @@ update_opts() {
     mv "$OPTS_FILE" "$OPTS_FILE_BACKUP"
     touch "$OPTS_FILE"
     while IFS= read LINE; do
-        NAME=$(echo $LINE | cut -d: -f1 | trim_whitespace)
-        CMD=$(echo $LINE | cut -d: -f2 | trim_whitespace)
+        NAME=$(echo $LINE | cut -d':' -f1 | trim_whitespace)
+        CMD=$(echo $LINE | cut -d':' -f2 | trim_whitespace)
         [ -z "$NAME" ] && continue
         [ -z "$CMD" ] && CMD="$NAME"
-        printf "%s : %s\n" "$NAME" "$CMD" >> "$OPTS_FILE"
+        printf "%s: %s\n" "$NAME" "$CMD" >> "$OPTS_FILE"
     done < "$TMP"
     log_info "$ID" "Launcher updated."
     rm "$TMP"
 }
 
-edit_mode_header() {
+editor_header() {
     echo "#####################################################"
-    echo "###              ZMENU:LAUNCHER EDIT              ###"
-    echo "###  Enter / edit entries in the following way:   ###"
-    echo "###              option1: command1                ###"
-    echo "###              option2: command2                ###"
-    echo "###                    etc...                     ###"
+    echo "###             ZMENU:LAUNCHER CONFIG             ###"
+    echo "### _____________________________________________ ###"
+    echo "### Add / edit entries in the following format:   ###"
+    echo "### option1: command1                             ###"
+    echo "### option2: command2                             ###"
+    echo "### etc...                                        ###"
+    echo "###                                               ###"
+    echo "### Or simply enter the name of the command:      ###"
+    echo "### command3                                      ###"
+    echo "### command4                                      ###"
+    echo "### etc...                                        ###"
     echo "#####################################################"
-    echo "###    A backup file will be created on edit.     ###"
-    echo "#####################################################"
-    echo "###       To abort, leave this file empty.        ###"
+    echo "### A backup file will be created on edit.        ###"
+    echo "### To abort, close this buffer.                  ###"
     echo "#####################################################"
     echo ""
 }
 
-edit_mode() {
-    local ID="$ID:edit"
+config_mode() {
+    local ID="$ID:config"
     local TMP_FILE=$(mktemp)
     local SUBOPT=$(d_read "$ID" "edit\nrestore backup")
     case $SUBOPT in
         edit)
-            edit_mode_header     > "$TMP_FILE"
+            editor_header       >  "$TMP_FILE"
             get_opts            >> "$TMP_FILE"
             update_opts         "$(kitty-edit "$TMP_FILE" "-c $")"
             rm "$TMP_FILE"
@@ -105,6 +110,6 @@ launcher_mode() {
     #exec $CMD > /dev/null 2>&1 & disown
 }
 
-[ "$ARG" == "--edit" ] && edit_mode
+[ "$ARG" == "--config" ] && config_mode
 [ -z "$ARG" ]          && launcher_mode
 
