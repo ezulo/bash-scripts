@@ -8,19 +8,36 @@
 # --> $XDG_CONFIG_HOME/hypr/hyprland-windowrules.conf
 #
 
-ID=${1:-"kitty-prompt"}
-MENU_PROMPT=${2:-"Submit input"}
-TMP="$(mktemp)"
+WINDOW_WIDTH=600
+WINDOW_HEIGHT=120
 
+ID=${1:-"kitty-prompt"} && shift
+MENU_PROMPT=${1:-"Submit input"} && shift
+MODE=${1:-"normal"}
+TMP="$(mktemp -u)"
+mkfifo -m 600 "$TMP"
+
+READ_FLAGS=""
+case "$MODE" in
+    silent)
+        READ_FLAGS="-s"
+        ;;
+    normal|*)
+        READ_FLAGS="-r"
+        ;;
+esac
 
 kitty \
     --class kitty-prompt \
     --override="map Esc close" \
     --override="confirm_os_window_close 0" \
+    --override="initial_window_width  $WINDOW_WIDTH" \
+    --override="initial_window_height $WINDOW_HEIGHT" \
     bash -c \
     'echo '"$ID \| $MENU_PROMPT"'; \
     printf "%*s\n" "$(tput cols)" "" | tr " " "-"; \
-    read -r line; echo "$line" > '"$TMP" 2>/dev/null
+    read '"$READ_FLAGS"' line && echo "$line" > '"$TMP" 2>/dev/null
 
 printf "%b" "$(cat $TMP)"
+rm "$TMP"
 

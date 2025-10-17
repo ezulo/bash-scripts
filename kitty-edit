@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+#
+# A script for running a kitty subprocess to act as a one-off text edit.
+# Will take in an input file, and output the resulting editor buffer
+# as stdout.
+# 
+
+
+WINDOW_WIDTH=600
+WINDOW_HEIGHT=600
+
+ID="kitty-edit"
+IN_FILE="$1" && shift
+EDITOR_FLAGS="$1"
+EDITOR=${EDITOR:-nvim}
+TMP="$(mktemp)"
+
+# If no file is provided, editor is opened with a blank buffer.
+[ -z "$IN_FILE" ] && IN_FILE=$(mktemp) && echo "$IN_FILE"
+
+CMD="$EDITOR -c \"read $IN_FILE\" $EDITOR_FLAGS $TMP"
+
+kitty \
+    --class kitty-edit \
+    --override="map Ctrl+Esc close" \
+    --override="confirm_os_window_close 0" \
+    --override="initial_window_width  $WINDOW_WIDTH" \
+    --override="initial_window_height $WINDOW_HEIGHT" \
+    bash -c "$CMD" 2> /dev/null
+
+cat "$TMP" && rm "$TMP"
+
