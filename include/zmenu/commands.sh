@@ -13,7 +13,7 @@ d_read() {
     local ID="$1"
     local OPTS="$2"
     local PROMPT="$3"
-    [ -z $PROMPT ] && PROMPT="$ID" || PROMPT="$ID | $PROMPT"
+    [ -z "$PROMPT" ] && PROMPT="$ID" || PROMPT="$ID | $PROMPT"
     echo -e "$OPTS" | $DMENU_CMD -p "$PROMPT" && return 0
     return 1
 }
@@ -58,15 +58,15 @@ d_cache_append() {
 
 # reads a single line of text from kitty prompt
 k_read() {
-    local ID="$1"
-    local K_PROMPT="$2"
+    local ID="${1:-kitty-prompt}"
+    local K_PROMPT="${2:-Enter input}"
     "$KPROMPT_CMD" "$ID" "$K_PROMPT"
 }
 
 k_read_silent() {
-    local ID="$1"
-    local K_PROMPT="$2"
-    "$KPROMPT_CMD" "$ID" "$K_PROMPT" "-s"
+    local ID="${1:-kitty-prompt}"
+    local K_PROMPT="${2:-Enter input}"
+    "$KPROMPT_CMD" "$ID" "$K_PROMPT" silent
 }
 
 _cache_read_n() {
