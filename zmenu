@@ -23,5 +23,5 @@ MODULE=$1
     log_error "$ID" "Module not found: $MODULE" && exit 1
 
 # Invoke the module
-source "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh"
+shift && source "$ZMENU_INCLUDE_DIR/modules/$MODULE.sh"
 
