@@ -15,6 +15,7 @@ INLINE_PADDING=5
 
 NO_COLOR=
 NO_FMT=
+NO_KEY=
 [ ! command -v bc > /dev/null 2>&1 ] &&
     log_warn $ID_COLOR "bc not found. Color output disabled." &&
     NO_COLOR=true
@@ -76,9 +77,10 @@ print_color() {
     [ -z "$KEY" ] && KEY="$QUERY"
     COLOR_HEX=$(get_color_hex $1)
     [ -z $NO_COLOR ] && COLOR_HEX=$(colorize_hex "$COLOR_HEX")
+    [ ! -z $NO_FMT ] && [ ! -z $NO_KEY ] && KEY="" || KEY="$KEY:"
     [ ! -z $NO_FMT ] &&
-        OUT=$(echo -n "${COLOR_HEX}") ||
-        OUT=$(echo -n "${KEY}: ")"${COLOR_HEX}"
+        OUT=$(echo -n "${KEY}${COLOR_HEX}") ||
+        OUT=$(echo -n "${KEY} ")"${COLOR_HEX}"
     [ ! -z $NEWLINE ] && OUT="$OUT\n"
     printf "%b" "$OUT"
 }
@@ -150,6 +152,7 @@ themecolor() {
     for ARG in "$@"; do
         [ "$ARG" = "no_color" ] && NO_COLOR=true
         [ "$ARG" = "no_fmt"   ] && NO_FMT=true
+        [ "$ARG" = "no_key"   ] && NO_KEY=true
     done
     [[ "$QUERY" =~ ^[0-9]+$ ]] && QUERY="color${QUERY}"
     local COLORS=()
