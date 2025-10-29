@@ -26,5 +26,6 @@ FILE="$OPT"
 # Append md extension if missing
 [[ ! "$FILE" =~ \.md$ ]] && FILE=$FILE.md
 
-$HYPR_TERMINAL nvim $NOTES_DIR/$FILE
+#$HYPR_TERMINAL nvim $NOTES_DIR/$FILE
+kitty-edit "$NOTES_DIR/$FILE"
 

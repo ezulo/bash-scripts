@@ -4,17 +4,16 @@
 # A script for running a window for running a single command. Will not return anything.
 # 
 
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$MY_DIR"/include/kitty/*
+ID="${ID}cmd"
+
+CMD="$1"
+
 WINDOW_WIDTH=800
 WINDOW_HEIGHT=800
 
-ID="kitty-cmd"
-CMD="$1" && shift
+[ -z "$CMD" ] && echo "No command provided." && exit 1
 
-kitty \
-    --class kitty-cmd \
-    --override="map Ctrl+Esc close" \
-    --override="confirm_os_window_close 0" \
-    --override="initial_window_width  $WINDOW_WIDTH" \
-    --override="initial_window_height $WINDOW_HEIGHT" \
-    bash -c "$CMD" 2> /dev/null
+kitty_spawn "$ID" "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$CMD"
 

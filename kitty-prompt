@@ -8,14 +8,18 @@
 # --> $XDG_CONFIG_HOME/hypr/hyprland-windowrules.conf
 #
 
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$MY_DIR"/include/kitty/*
+ID="${ID}prompt"
+
+CALLER_ID=${1:-$ID} && shift
+MENU_PROMPT=${1:-"Submit input"} && shift
+MODE=${1:-"normal"}
+
 WINDOW_WIDTH=600
 WINDOW_HEIGHT=120
 
-ID=${1:-"kitty-prompt"} && shift
-MENU_PROMPT=${1:-"Submit input"} && shift
-MODE=${1:-"normal"}
-TMP="$(mktemp -u)"
-mkfifo -m 600 "$TMP"
+TMP="$(mktemp)"
 
 READ_FLAGS=""
 case "$MODE" in
@@ -27,17 +31,12 @@ case "$MODE" in
         ;;
 esac
 
-kitty \
-    --class kitty-prompt \
-    --override="map Esc close" \
-    --override="confirm_os_window_close 0" \
-    --override="initial_window_width  $WINDOW_WIDTH" \
-    --override="initial_window_height $WINDOW_HEIGHT" \
-    bash -c \
-    'echo '"$ID \| $MENU_PROMPT"'; \
-    printf "%*s\n" "$(tput cols)" "" | tr " " "-"; \
-    read '"$READ_FLAGS"' line && echo "$line" > '"$TMP" 2>/dev/null
+CMD="echo '$CALLER_ID | $MENU_PROMPT' && 
+    printf %*s\\\\n \$(tput cols) | 
+    tr ' ' '-' && 
+    read line && 
+    echo \$line > \"$TMP\""
 
-printf "%b" "$(cat $TMP)"
-rm "$TMP"
+kitty_spawn "$ID" "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$CMD" &&
+    printf "%b" "$(cat $TMP)" && rm "$TMP"
 

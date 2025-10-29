@@ -17,9 +17,13 @@ trim_whitespace() {
 }
 
 reset_recents() {
-    local FORCE="$1"
-    [ "$FORCE" == "--force" ] || [ ! -f "$OPTS_FILE_RECENTS" ] &&
+    [[ "$@ " =~ "--force " ]] || [ ! -f "$OPTS_FILE_RECENTS" ] &&
         cp "$OPTS_FILE" "$OPTS_FILE_RECENTS"
+}
+
+restore_opts() {
+    mv "$OPTS_FILE_BACKUP" "$OPTS_FILE"
+    reset_recents --force
 }
 
 update_recents() {
@@ -32,12 +36,12 @@ update_recents() {
 }
 
 get_opts() {
-    local FLAG="$1"
     local CUT="cat"
     local IN_FILE="$OPTS_FILE_RECENTS"
     reset_recents
-    [ "$1" == "--name" ] && CUT="cut -d: -f1"
-    [ "$1" == "--cmd" ] && CUT="cut -d: -f2"
+    [[ "$@ " =~ "--name "         ]] && CUT="cut -d: -f1"
+    [[ "$@ " =~ "--cmd "          ]] && CUT="cut -d: -f2"
+    [[ "$@ " =~ "--no_recent "    ]] && IN_FILE="$OPTS_FILE"
     while IFS= read -r LINE; do
         echo "$LINE" | $CUT | trim_whitespace 
     done < "$IN_FILE"
@@ -56,15 +60,19 @@ lookup_opt() {
 }
 
 update_opts() {
-    local IN_BUF="$1"
-    local TMP=$(mktemp)
     local NAME=
     local CMD=
-    echo "$IN_BUF" | sed -e "/###.*###/d" > "$TMP"
-    [ -z "$(cat $TMP)" ] && log_info "$ID" "Aborted." && return 0
+    local TMP=$(mktemp)
+    editor_header           >  "$TMP"
+    get_opts --no_recent    >> "$TMP"
+    local SUM=$(sha256sum "$TMP")
+    kitty-edit "$TMP" '-c $'
+    [ "$SUM" == "$(sha256sum $TMP)" ] &&
+        log_info "$ID" "Aborted." && return 0
     mv "$OPTS_FILE" "$OPTS_FILE_BACKUP"
     touch "$OPTS_FILE"
     while IFS= read LINE; do
+        [[ "$LINE" =~ ^'#' ]] && continue
         NAME=$(echo $LINE | cut -d':' -f1 | trim_whitespace)
         CMD=$(echo $LINE | cut -d':' -f2 | trim_whitespace)
         [ -z "$NAME" ] && continue
@@ -102,20 +110,19 @@ config_mode() {
     local SUBOPT=$(d_read "$ID" "edit\nclear history\nrestore backup")
     case $SUBOPT in
         edit)
-            editor_header       >  "$TMP_FILE"
-            get_opts            >> "$TMP_FILE"
-            update_opts         "$(kitty-edit "$TMP_FILE" "-c $")"
+            editor_header           >  "$TMP_FILE"
+            get_opts --no_recent    >> "$TMP_FILE"
+            update_opts
             rm "$TMP_FILE"
             ;;
         restore*)
-            cp "$OPTS_FILE_BACKUP" "$OPTS_FILE" && log_info "$ID" "Backup restored."
+            restore_opts && log_info "$ID" "Backup restored."
             ;;
         clear*)
             reset_recents --force
             log_info "$ID" "History cleared."
             ;;
         *)
-            log_error "$ID" "Unrecognized option."
             return 1
             ;;
     esac

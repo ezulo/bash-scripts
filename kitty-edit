@@ -6,28 +6,22 @@
 # as stdout.
 # 
 
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$MY_DIR"/include/kitty/*
+ID="${ID}edit"
 
-WINDOW_WIDTH=800
-WINDOW_HEIGHT=800
-
-ID="kitty-edit"
 IN_FILE="$1" && shift
-EDITOR_FLAGS="$1"
+EDITOR_FLAGS="$1" && shift
+
 EDITOR=${EDITOR:-nvim}
-TMP="$(mktemp)"
+
+WINDOW_WIDTH=1200
+WINDOW_HEIGHT=800
 
 # If no file is provided, editor is opened with a blank buffer.
 [ -z "$IN_FILE" ] && IN_FILE=$(mktemp) && echo "$IN_FILE"
 
-CMD="$EDITOR -c \"read $IN_FILE\" $EDITOR_FLAGS $TMP"
-
-kitty \
-    --class kitty-edit \
-    --override="map Ctrl+Esc close" \
-    --override="confirm_os_window_close 0" \
-    --override="initial_window_width  $WINDOW_WIDTH" \
-    --override="initial_window_height $WINDOW_HEIGHT" \
-    bash -c "$CMD" 2> /dev/null
-
-cat "$TMP" && rm "$TMP"
+CMD="$EDITOR $EDITOR_FLAGS $IN_FILE"
+kitty_spawn "$ID" "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$CMD" && 
+    [ -f "$IN_FILE" ] && echo "$IN_FILE"
 
