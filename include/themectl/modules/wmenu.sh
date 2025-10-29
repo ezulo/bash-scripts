@@ -25,7 +25,7 @@ subst_line() {
         case $EXPR in
             COLOR_*)
                 local COLOR_CODE=${EXPR#COLOR_}
-                local COLOR_VALUE=$(themecolor $COLOR_CODE no_color no_fmt)
+                local COLOR_VALUE=$(themecolor $COLOR_CODE no_color no_fmt no_key)
                 COLOR_VALUE="${COLOR_VALUE:1}" # Everything but first char ('#')
                 LINE=$(sed -e "s|{_${EXPR}_}|${COLOR_VALUE}|g" <<< "$LINE")
                 ;;
