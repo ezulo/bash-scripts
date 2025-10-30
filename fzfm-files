@@ -1,0 +1,75 @@
+#!/bin/env bash
+
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$XDG_CONFIG_HOME/scripts/include/util/log.sh"
+
+#
+# Arguments
+#
+
+PREVIEW=
+DIRECTORY="$HOME"
+DIRECTORY_DEPTH=
+PROMPT=
+TITLE=
+EXT_OPTS=""
+OUT_FILE="$XDG_CACHE_HOME/fzfm.out"
+while ! [ -z "$1" ]; do
+    [ "$1" == "--preview" ] && shift && PREVIEW="$1"
+    [ "$1" == "--src" ] && shift && DIRECTORY="$1"
+    [ "$1" == "--out" ] && shift && OUT_FILE="$1"
+    [ "$1" == "--depth" ] && shift && DIRECTORY_DEPTH="$1"
+    [ "$1" == "--prompt" ] && shift && PROMPT="$1"
+    [ "$1" == "--title" ] && shift && TITLE="$1"
+    [ "$1" == "--opt" ] && shift && EXT_OPTS+="$1\n"
+    shift
+done
+
+# Remove trailing forward slash, if present
+[ "${DIRECTORY: -1}" == "/" ] && DIRECTORY="${DIRECTORY%?}"
+
+! [ -d "$DIRECTORY" ] && log_error "fzfm-files" "Directory not found: $DIRECTORY" && exit 1
+
+# Color definitions
+source "$MY_DIR/include/util/themecolor.sh"
+FZFM_COLOR_BORDER=$(c 15)
+FZFM_COLOR_BORDER_LABEL=$(c 15)
+FZFM_COLOR_HEADER=$(c 15)
+FZFM_COLOR_LIST_BORDER=$(c 2)
+FZFM_COLOR_LIST_LABEL=$(c 10)
+FZFM_COLOR_INPUT_BORDER=$(c 1)
+FZFM_COLOR_INPUT_LABEL=$(c 1)
+FZFM_COLOR_HEADER_BORDER=$(c 4)
+FZFM_COLOR_HEADER_LABEL=$(c 12)
+FZFM_COLOR_PREVIEW_BORDER=$(c 15)
+FZFM_COLOR_PREVIEW_LABEL=$(c 15)
+FZFM_BORDER_LABEL=" ${TITLE:-"fzfm:files"} "
+FZFM_INPUT_LABEL=" ${PROMPT:-"Select a File"} "
+FZFM_HEADER_LABEL=" File Type " #?
+FZFM_PREVIEW="$PREVIEW"
+FZFM_DIRECTORY="$DIRECTORY"
+
+# Flags
+FLAGS=
+source "$MY_DIR/include/fzfm/flags_base.sh"
+FLAGS+=(
+    "--style full"
+    "--bind 'focus:+transform-header:stat "$FZFM_DIRECTORY"/{} >/dev/null 2>&1 &&\
+        file --brief $FZFM_DIRECTORY/{} || echo no file selected'"
+)
+! [ -z "$FZFM_PREVIEW" ] && FLAGS+=(
+    "--preview '$FZFM_PREVIEW'"
+    "--color preview-border:$FZFM_COLOR_PREVIEW_BORDER,preview-label:$FZFM_COLOR_PREVIEW_LABEL"
+    "--bind result:transform-list-label:'[[ -z \$FZF_QUERY ]] && echo \" \$FZF_MATCH_COUNT items \" || echo \" \$FZF_MATCH_COUNT matches for [\$FZF_QUERY] \"'"
+)
+
+# Build option list
+OPTS="$EXT_OPTS"
+OPTS+=$(find "$FZFM_DIRECTORY" -type f -exec ls -1t "{}" + | sed "s|^$DIRECTORY/||")
+
+rm "$OUT_FILE"
+SELECTED=$(echo -e "$OPTS" | eval fzf "${FLAGS[@]}")
+[ -z "$SELECTED" ] && exit 1
+echo "${SELECTED}"
+! [ -z "$OUT_FILE" ] && echo "$SELECTED" > "$OUT_FILE"
+
