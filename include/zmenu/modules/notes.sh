@@ -2,30 +2,37 @@
 
 ID="$_ID:notes"
 
-echo "$ID"
-echo "hello world"
-
 # Const
 HYPR_TERMINAL=${HYPR_TERMINAL:-kitty}
 NOTES_DIR=${NOTES_DIR:-$HOME/Notes}
 [ ! -d "$NOTES_DIR" ] && mkdir -p "$NOTES_DIR"
-echo "hello world"
 
-CREATE_NEW="New..."
-LS_NOTES=$(ls -t --color=none -1 "$NOTES_DIR")
-OPT=$(d_read "$ID" "$CREATE_NEW\n$LS_NOTES")
-echo "hello world"
+CREATE_NEW="[ NEW NOTE ]"
+LS_NOTES="$CREATE_NEW\n"
+FZFM_OUT="$XDG_CACHE_HOME/fzfm.out"
+kitty-cmd "fzfm-files" -- \
+    --out "$FZFM_OUT" --src "$NOTES_DIR" --opt "$CREATE_NEW" --prompt 'Choose a Note'
+OPT=$(cat "$FZFM_OUT")
+
 [ -z "$OPT" ] && exit 1
-NOW=$(date +"%Y-%m-%dT%H:%M:%S%z")
-
 FILE="$OPT"
 
 # Default (create file with timestamp)
-[[ "$OPT" == "$CREATE_NEW" ]] && FILE=$NOW.md
+[[ "$OPT" == "$CREATE_NEW" ]] && 
+    FILE=$(k_read "$ID" "Select a filename (or leave blank)") &&
+    [ -z "$FILE" ] &&
+    echo "timestamping" &&
+    FILE=$(date +"%Y-%m-%dT%H:%M:%S%z").md
 
 # Append md extension if missing
 [[ ! "$FILE" =~ \.md$ ]] && FILE=$FILE.md
 
-#$HYPR_TERMINAL nvim $NOTES_DIR/$FILE
+# Resolve the absolute path
+FILEPATH="$NOTES_DIR/$FILE"
+
+# Try to write directory, if relevant
+! [ -d $(dirname "$FILEPATH") ] && ! mkdir -p $(dirname "$FILEPATH") && 
+    log_error "$ID" "Could not create parent directory for $FILEPATH" && exit 1
+
 kitty-edit "$NOTES_DIR/$FILE"
 
