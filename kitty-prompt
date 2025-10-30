@@ -10,7 +10,7 @@
 
 MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source "$MY_DIR"/include/kitty/*
-ID="${ID}prompt"
+ID="${_ID}-prompt"
 
 CALLER_ID=${1:-$ID} && shift
 MENU_PROMPT=${1:-"Submit input"} && shift
@@ -37,6 +37,10 @@ CMD="echo '$CALLER_ID | $MENU_PROMPT' &&
     read line && 
     echo \$line > \"$TMP\""
 
-kitty_spawn "$ID" "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$CMD" &&
-    printf "%b" "$(cat $TMP)" && rm "$TMP"
+TMP_CMD=$(mktemp)
+chmod +x "$TMP_CMD"
+echo "$CMD" > "$TMP_CMD"
+kitty_spawn "$TMP_CMD" --class="$ID" --width="$WINDOW_WIDTH" --height="$WINDOW_HEIGHT" &&
+    printf "%b" "$(cat $TMP)"
+rm "$TMP" "$TMP_CMD"
 

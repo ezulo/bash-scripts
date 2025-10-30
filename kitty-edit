@@ -8,7 +8,7 @@
 
 MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source "$MY_DIR"/include/kitty/*
-ID="${ID}edit"
+ID="${_ID}-edit"
 
 IN_FILE="$1" && shift
 EDITOR_FLAGS="$1" && shift
@@ -22,6 +22,6 @@ WINDOW_HEIGHT=800
 [ -z "$IN_FILE" ] && IN_FILE=$(mktemp) && echo "$IN_FILE"
 
 CMD="$EDITOR $EDITOR_FLAGS $IN_FILE"
-kitty_spawn "$ID" "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$CMD" && 
+kitty_spawn "$CMD" --class="$ID" --width="$WINDOW_WIDTH" --height="$WINDOW_HEIGHT" &&
     [ -f "$IN_FILE" ] && echo "$IN_FILE"
 

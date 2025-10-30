@@ -4,7 +4,7 @@
 # Utilities for kitty-(cmd|edit|prompt)
 # 
 
-ID="kitty-"
+_ID="kitty"
 DEFAULT_WINDOW_WIDTH=800
 DEFAULT_WINDOW_HEIGHT=800
 
@@ -30,18 +30,40 @@ kill_on_unfocus() (
 
 kitty_spawn() {
     kitty_close_all
-    local WINDOW_CLASS="$1" && shift
-    local WINDOW_WIDTH="${1:-${DEFAULT_WINDOW_WIDTH}}" && shift
-    local WINDOW_HEIGHT="${1:-${DEFAULT_WINDOW_HEIGHT}}" && shift
+    local WINDOW_CLASS="${ID:-"${_ID}"}"
+    local WINDOW_WIDTH="$DEFAULT_WINDOW_WIDTH"
+    local WINDOW_HEIGHT="$DEFAULT_WINDOW_HEIGHT"
     local CMD="$1" && shift
     [ -z "$CMD" ] && return 1
-    local OVERRIDE=(
+    local KITTY_FLAGS=()
+    local CMD_FLAGS=()
+    while ! [ -z "$1" ]; do
+        [ "$1" == "--" ] && shift && break
+        case "$1" in
+            '--width='*)
+                WINDOW_WIDTH=$(cut -d '=' -f2 <<< "$1")
+                ;;
+            '--height='*)
+                WINDOW_HEIGHT=$(cut -d '=' -f2 <<< "$1")
+                ;;
+            '--class='*)
+                WINDOW_CLASS=$(cut -d '=' -f2 <<< "$1")
+                ;;
+            *)
+                KITTY_FLAGS+=("$1"); 
+                ;;
+        esac
+        shift
+    done
+    while ! [ -z "$1" ]; do 
+        CMD_FLAGS+=("$1") && shift;
+    done
+    KITTY_FLAGS+=(
         "--override=map Ctrl+Esc close"
         "--override=confirm_os_window_close 0"
         "--override=initial_window_width $WINDOW_WIDTH"
         "--override=initial_window_height $WINDOW_HEIGHT"
     )
-    while ! [ -z "$1" ]; do OVERRIDE+=("--override=\"$1\"") && shift; done
-    kitty --class "$WINDOW_CLASS" "${OVERRIDE[@]}" bash -c "$CMD" > /dev/null 2>&1
+    kitty --class $WINDOW_CLASS "${KITTY_FLAGS[@]}" $CMD "${CMD_FLAGS[@]}"
 }
 

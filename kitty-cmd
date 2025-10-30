@@ -7,14 +7,14 @@
 MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source "$MY_DIR"/include/kitty/*
 source "$MY_DIR"/include/util/log.sh
-ID="${ID}cmd"
+ID="${_ID}-cmd"
 
-CMD="$1"
+CMD="$1" && shift
 
 WINDOW_WIDTH=800
 WINDOW_HEIGHT=800
 
 [ -z "$CMD" ] && log_info "$ID" "No command provided." && exit 1
 
-kitty_spawn "$ID" "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$CMD"
+kitty_spawn "$CMD" --class="$ID" --width=$WINDOW_WIDTH --height=$WINDOW_HEIGHT "$@"
 
