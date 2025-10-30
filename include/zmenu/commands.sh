@@ -4,10 +4,9 @@
 CACHE_MAX_SZ=30
 
 #DMENU_CMD="wofi --dmenu --cache-file=/dev/null"
-DMENU_CMD="$HOME/.local/bin/wmenu-wrapper"
+#DMENU_CMD="kitty-cmd fzf"
+DMENU_CMD="wmenu-wrapper"
 KPROMPT_CMD="kitty-prompt"
-
-PATH="$PATH:$HOME/.config/scripts"
 
 d_read() {
     local ID="$1"

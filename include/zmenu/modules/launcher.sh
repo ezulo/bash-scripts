@@ -2,9 +2,9 @@
 
 ID="$_ID:launcher"
 ARG="$1" && shift
-OPTS_FILE="${1:-$ZMENU_INCLUDE_DIR/launcher/options}" && shift
-OPTS_FILE_BACKUP="${1:-$ZMENU_INCLUDE_DIR/launcher/options_backup}"
-OPTS_FILE_RECENTS="${1:-$ZMENU_INCLUDE_DIR/launcher/recent}"
+OPTS_FILE="${1:-$ZMENU_INCLUDE_DIR/launcher_options}" && shift
+OPTS_FILE_BACKUP="${1:-$XDG_CACHE_HOME/zmenu/launcher/options_backup}"
+OPTS_FILE_RECENTS="${1:-$XDG_CACHE_HOME/zmenu/launcher/recent}"
 
 [ ! -d "$(dirname "$OPTS_FILE")" ]          && mkdir -p "$(dirname "$OPTS_FILE")" 
 [ ! -d "$(dirname "$OPTS_FILE_BACKUP")" ]   && mkdir -p "$(dirname "$OPTS_FILE_BACKUP")" 
@@ -22,6 +22,7 @@ reset_recents() {
 }
 
 restore_opts() {
+    [ -f "$OPTS_FILE_BACKUP" ] &&
     mv "$OPTS_FILE_BACKUP" "$OPTS_FILE"
     reset_recents --force
 }

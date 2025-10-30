@@ -2,39 +2,36 @@
 
 ID="$_ID:convert"
 
-OPTS=()
-for FILE in "$ZMENU_INCLUDE_DIR"/convert/*; do
-    OPTS=( ${OPTS[@]} $(basename "$FILE" | sed -e 's/\.sh//g') )
-done
-
 MENU_PROMPT_MAIN="Select a conversion"
 
 unit_to_string() {
-    local UNIT="$1"
-    case "$UNIT" in
-        "in")
-            echo "inches"
-            ;;
-        "ft")
-            echo "feet"
-            ;;
-        "yd")
-            echo "yards"
-            ;;
-        "mm")
-            echo "millimeters"
-            ;;
-        "cm")
-            echo "centimeters"
-            ;;
-        "m")
-            echo "meters"
-            ;;
-        *)
-            return 1
-            ;;
+    case "$1" in
+        "in") echo "inches" ;; "ft") echo "feet" ;;
+        "yd") echo "yards" ;; "mm") echo "millimeters" ;;
+        "cm") echo "centimeters" ;; "m") echo "meters" ;;
+        *) return 1 ;;
     esac
 }
+
+divide_by_thousand() {
+    local NUM="$1"
+    local LEN="${#NUM}"
+    if (( $LEN <= 3 )); then
+        printf "0.%03d in.\n" "$NUM"
+    else
+        NUM_INT="${NUM:0:LEN-3}"
+        NUM_FRACT="${NUM: -3}"
+        printf "%b.%b" "$NUM_INT" "$NUM_FRACT"
+    fi
+}
+
+#
+# Conversion Functions
+# 
+OPTS=(in2ft in2mm mm2in)
+in2ft() { printf "%b'%b\"\n"    $(bc <<< "$1 / 12") $(bc <<< "$1 % 12"); }
+in2mm() { printf "%b\n"         $(bc <<< "$1 * 25.4"); }
+mm2in() { divide_by_thousand    $(bc <<< "($1 * 1000) / 25.4"); }
 
 opt_to_string() {
     local INPUT="$1"
@@ -68,7 +65,6 @@ for OPTS_I in "${OPTS[@]}"; do
             VAL=$( d_read_cached "$ID" "$OPT" "Enter $FROM_UNIT to convert to $TO_UNIT")
             ! [[ "$VAL" =~ $NUM_RE ]] &&
                 log_error $ID "Not a number: $VAL" && exit 1
-            source "$ZMENU_INCLUDE_DIR/convert/$OPT.sh"
             OUT=$($OPT "$VAL") && d_cache_append "$ID" "$OPT" "$VAL"
             echo -n $OUT | wl-copy
             # Append abbreviation; don't do it for feet (alrady has notation)
