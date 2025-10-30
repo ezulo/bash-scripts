@@ -4,7 +4,7 @@
 # Intention is for use with waybar
 
 FMT="{_PROJ_}/{_TASK_} {_TIME_}"
-ZEIT_CMD=${ZEIT_CMD:-"$HOME/.local/bin/zeit"}
+ZEIT_CMD="zeit"
 
 export ZEIT_DB=${ZEIT_DB:-"$XDG_CONFIG_HOME/zeit/zeit.db"}
 OUT=$("$ZEIT_CMD" tracking --no-colors)
