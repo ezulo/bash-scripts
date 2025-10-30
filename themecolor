@@ -1,0 +1,17 @@
+#!/bin/env bash
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+ID="themecolor"
+
+source "$MY_DIR/include/util/log.sh"
+source "$MY_DIR/include/util/themecolor.sh"
+
+themecolor_get $@
+case $? in
+    $THEMECOLOR_INVALID_QUERY_ERR)
+        log_error "$ID" "Invalid query: $@" && exit 1 ;;
+    $THEMECOLOR_REGEX_ERR)
+        log_error "$ID" "Regex color processing failed." && exit 1 ;;
+    $THEMECOLOR_JSON_NOT_FOUND_ERR)
+        log_error "$ID" "Theme color JSON file not found." && exit 1 ;; 
+esac
+

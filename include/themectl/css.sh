@@ -10,7 +10,6 @@ colors_to_css() {
     local OUT="$2"
     local NO_HEADER=
     [ "$3" == "no_header" ] && NO_HEADER=1
-    local THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme/$THEME"}
     PREFIX="@define-color " # Before color key
     DELIMITER=" " # After color key, before color value
     SUFFIX=";" # After color value

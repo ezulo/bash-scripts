@@ -15,19 +15,24 @@
 # ```
 #
 
+! [ -z "$UTIL_LOG_SOURCED" ] && return 0
+export UTIL_LOG_SOURCED=1
+
 UTIL_DIR=${UTIL_DIR:-"$XDG_CONFIG_HOME/scripts/include/util"}
+LOG_DIR=${LOG_DIR:-"$XDG_CONFIG_HOME/scripts/log"}
+LL_FILE="$UTIL_DIR/log-level"
 
 ###############################################################################
 ## Configuration ##############################################################
 ###############################################################################
 
 #
-# Default log level (LL)
+# Default log level (LL) and file logging
 #
-LL_DEFAULT=WARN
-# Override in file util/log/log-level
+LL_DEFAULT=INFO
 LL=$LL_DEFAULT
-[ -f "$UTIL_DIR/log/log-level" ] && LL=$(cat "$UTIL_DIR/log/log-level")
+[ -f "$LL_FILE" ] && LL=$(cat "$LL_FILE")
+LOG_TO_FILE=1
 
 #
 # Notification daemon backend commands (empty variable for log level = no-op)
@@ -69,7 +74,6 @@ __log() {
     local LEVEL="$1"    && shift && ! __log_filter $LEVEL && return 0
     local ID="$1"       && shift
     local MSG="$1"      && shift
-    local LOG_FILE="$1" && shift
     local SILENT=$([[ "$@" =~ "--silent " ]] && echo 1)
     local LOG=("$ID:$LEVEL" "$MSG")
     local LOG_ECHO=$(sed -e 's/\\n/ /g' <<< "${LOG[0]} | ${LOG[1]}")
@@ -78,7 +82,9 @@ __log() {
     # Notify
     [ ! -z "$NOTIFY_CMD" ] && ($NOTIFY_CMD "${LOG[0]}" "${LOG[1]}")
     # Log to file (if provided)
-    [ ! -z "$LOG_FILE" ] && echo "$LOG_ECHO" | tee -a "$LOG_FILE"
+    BASE_ID=$(echo "$ID" | cut -d ':' -f1)
+    [ ! -z $LOG_TO_FILE ] && LOG_FILE="$LOG_DIR/$(date +%Y_%m_%d)_${BASE_ID}.log" &&
+        echo "$(date +%Y_%m_%d\|%H:%M:%S)\|$LOG_ECHO" | tee -a "$LOG_FILE"
     # Log to stderr (unless --silent)
     [ -z "$SILENT" ] && echo "$LOG_ECHO" >&2
 }

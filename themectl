@@ -4,14 +4,12 @@ set -e
 export _ID="themectl"
 ID="$_ID"
 
-# Utility sources
-UTIL_DIR="$XDG_CONFIG_HOME/scripts/include/util"
-source "$UTIL_DIR/log.sh"
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+UTIL_DIR="$MY_DIR/include/util"
+THEMECTL_INCLUDE_DIR="$MY_DIR/include/themectl"
 
-# Themectl sources
-THEMECTL_INCLUDE_DIR="$XDG_CONFIG_HOME/scripts/include/themectl"
+source "$UTIL_DIR/log.sh"
 source "$THEMECTL_INCLUDE_DIR/file.sh"
-source "$THEMECTL_INCLUDE_DIR/color.sh"
 source "$THEMECTL_INCLUDE_DIR/css.sh"
 
 # Theme data
@@ -136,10 +134,6 @@ main() {
             ;;
         "ls")
             print_available_themes nostyle
-            ;;
-        "color" | "colors")
-            COLORS_JSON="$THEME_HOME/$THEME/colors.json"
-            themecolor $ARG # Unquoted on purpose
             ;;
         "create")
             create_theme $ARG # Unquoted on purpose

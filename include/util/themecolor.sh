@@ -1,9 +1,10 @@
 #!/bin/echo Please-Source
 
-ID_COLOR="$_ID:util:color"
+# pulls color values out of the current theme's `colors.json` and prints them (prettily)
 
-# This themectl utility pulls color values out of the current theme's 
-# `colors.json` and prints them (prettily)
+# source guard
+! [ -z "$UTIL_COLOR__SOURCED" ] && return 0
+export UTIL_COLOR__SOURCED=1
 
 # Luminance Delta Threshold (0 through 255) (default: 70)
 # When the background and color are too similar, we color the output background 
@@ -16,9 +17,17 @@ INLINE_PADDING=5
 NO_COLOR=
 NO_FMT=
 NO_KEY=
-[ ! command -v bc > /dev/null 2>&1 ] &&
-    log_warn $ID_COLOR "bc not found. Color output disabled." &&
-    NO_COLOR=true
+[ ! command -v bc > /dev/null 2>&1 ] && NO_COLOR=true
+
+# Error codes
+export THEMECOLOR_INVALID_QUERY_ERR=3
+export THEMECOLOR_REGEX_ERR=4
+export THEMECOLOR_JSON_NOT_FOUND_ERR=5
+
+# Pull theme data
+THEME_HOME=${THEME_HOME:-"$XDG_CONFIG_HOME/theme"}
+THEME="$(cat $THEME_HOME/current-theme)"
+COLORS_JSON="$THEME_HOME/$THEME/colors.json"
 
 # Helper function to calculate perceived luminance, used for colorizing output
 rgb_luminance() {
@@ -32,7 +41,7 @@ colorize_hex() {
     local HEX=$1 #e.g. "#012345"
     local HEX_REGEX='#[0-9|a-f|A-F]+$'
     [[ ! $HEX =~ $HEX_REGEX ]] || [ $(echo "$HEX" | wc -L) -ne 7 ] &&
-        echo -ne "${HEX}[INVALID]" && return 1
+        echo -ne "${HEX}[INVALID]" && exit $EXIT_CODE_REGEX_ERR
     local R=$((16#"${HEX:1:2}"))
     local G=$((16#"${HEX:3:2}"))
     local B=$((16#"${HEX:5:2}"))
@@ -55,15 +64,12 @@ get_color_hex() {
     case $QUERY in
         color*)
             local COLOR_CODE=$(echo "${QUERY#*color}")
-            [ $COLOR_CODE -gt 15 ] || [ $COLOR_CODE -lt 0 ] &&
-                log_error $ID "Color code $COLOR_CODE out of range (0-15)" &&
-                return 1
+            [ $COLOR_CODE -gt 15 ] || [ $COLOR_CODE -lt 0 ] && exit $EXIT_CODE_INVALID_QUERY
             COLOR=$(jq -r .[\"colors\"].$QUERY $COLORS_JSON)
             ;;
         *)
             COLOR=$(jq -r .[\"special\"].$QUERY $COLORS_JSON)
-            [ "$COLOR" = "null" ] &&
-                log_error $ID "Color not found: $COLOR" && return 1
+            [ "$COLOR" = "null" ] && exit $EXIT_CODE_INVALID_QUERY
             ;;
     esac
     printf "%b" "$COLOR"
@@ -144,11 +150,10 @@ print_all() {
     done
 }
 
-themecolor() {
+themecolor_get() {
     local ID="$ID_COLOR:$FUNCNAME"
-    [ -z "$COLORS_JSON" ] &&
-        log_warn "$ID" "Not found: $COLORS_JSON." && return 1
-    local QUERY=$1 && shift
+    [ -z "$COLORS_JSON" ] && exit $THEMECOLOR_JSON_NOT_FOUND_ERR;
+    local QUERY=${1:-"all"} && shift
     for ARG in "$@"; do
         [ "$ARG" = "no_color" ] && NO_COLOR=true
         [ "$ARG" = "no_fmt"   ] && NO_FMT=true
@@ -182,4 +187,6 @@ themecolor() {
     esac
 }
 
+# Shorthand to get unformatted color string
+c() { themecolor_get "$1" no_key no_fmt no_color; }
 
