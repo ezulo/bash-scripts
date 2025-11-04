@@ -8,13 +8,13 @@ BACKEND=/usr/bin/bc
     log_error "$ID" "$BACKEND not found." && exit 1
 
 PROMPT="Enter a calculation"
-CALC=$(d_read_cached "$ID" "history" "$PROMPT")
+CALC=$(k_read "$ID" "$PROMPT")
 [ -z "$CALC" ] && exit 1
 
 RES=$(echo "$CALC" | "$BACKEND" 2>&1)
 
 [[ "$RES" == *"error"* ]] &&
-    log_error "$ID" "Error: could not calculate." && exit 1
+    log_error "$ID" "Error: could not calculate: [ $CALC ] -> [ $RES ]" && exit 1
 
 echo -n "$RES" | wl-copy
 d_cache_append "$ID" "history" "$CALC"
