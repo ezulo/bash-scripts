@@ -7,6 +7,13 @@ CACHE_MAX_SZ=30
 #DMENU_CMD="kitty-cmd fzf"
 DMENU_CMD="wmenu-wrapper"
 KPROMPT_CMD="kitty-prompt"
+FZF_CMD_FILES="fzf-files"
+FZF_CMD_SELECT="fzf-select"
+
+FZY_CMD_SELECT="fzy-select"
+
+# An output file for subprocesses, so this script may see the output
+SUB_OUT_FILE="$XDG_CACHE_HOME/zmenu.out"
 
 d_read() {
     local ID="$1"
@@ -66,6 +73,20 @@ k_read_silent() {
     local ID="${1:-kitty-prompt}"
     local K_PROMPT="${2:-Enter input}"
     "$KPROMPT_CMD" "$ID" "$K_PROMPT" silent
+}
+
+fzf_file_select() {
+    local ID="$1"       && shift
+    local PROMPT="$1"   && shift
+    local SRC_DIR="$1"  && shift
+    "$FZF_CMD_FILES" --title "$ID" --src "$SRC_DIR" --prompt "$PROMPT" --out "$SUB_OUT_FILE" "$@"
+}
+
+fzf_select() {
+    local ID="$1"       && shift
+    local PROMPT="$1"   && shift
+    local OPTS="$1"     && shift
+    "$FZF_CMD_SELECT" --title "$ID" --prompt "$PROMPT" --opts "$OPTS" --out "$SUB_OUT_FILE" "$@"
 }
 
 _cache_read_n() {

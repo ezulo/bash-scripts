@@ -12,7 +12,7 @@ ZMENU_INCLUDE_DIR="$MY_DIR/include/zmenu"
 UTIL_DIR="$MY_DIR/include/util"
 
 source "$UTIL_DIR/log.sh"
-source "$ZMENU_INCLUDE_DIR/commands.sh"
+source "$ZMENU_INCLUDE_DIR/input.sh"
 
 MODULE=$1
 [ -z "$MODULE" ] &&
