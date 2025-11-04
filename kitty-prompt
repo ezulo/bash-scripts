@@ -31,7 +31,8 @@ case "$MODE" in
         ;;
 esac
 
-CMD="echo '$CALLER_ID | $MENU_PROMPT' && 
+CMD="set -f &&
+    echo '$CALLER_ID | $MENU_PROMPT' && 
     printf %*s\\\\n \$(tput cols) | 
     tr ' ' '-' && 
     read line && 
