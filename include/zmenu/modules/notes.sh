@@ -11,7 +11,7 @@ CREATE_NEW="[ NEW NOTE ]"
 LS_NOTES="$CREATE_NEW\n"
 FZFM_OUT="$XDG_CACHE_HOME/fzfm.out"
 kitty-cmd "fzfm-files" -- \
-    --out "$FZFM_OUT" --src "$NOTES_DIR" --opt "$CREATE_NEW" --prompt 'Choose a Note'
+    --title "$ID" --out "$FZFM_OUT" --src "$NOTES_DIR" --opt "$CREATE_NEW" --prompt 'Choose a Note'
 OPT=$(cat "$FZFM_OUT")
 
 [ -z "$OPT" ] && exit 1
