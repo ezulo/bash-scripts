@@ -1,0 +1,45 @@
+#!/bin/env bash
+
+# 
+# FZF menu to select audio sink
+#
+
+set -e
+
+TITLE="Pulseaudio Sinks"
+PROMPT="Select an audio sink."
+NOTES_DIR="$HOME/Notes"
+PREVIEW="cat '$NOTES_DIR/{}' 2> /dev/null || echo {}"
+EDITOR=${EDITOR:-"nvim"}
+
+# get list of sinks
+SINKS_RAW=$(wpctl status)
+SINKS_LN=$(echo "$SINKS_RAW" | grep -n -m 1 "Sinks:" | cut -f1 -d:)
+SINKS_LN_END=$((
+    $(echo "$SINKS_RAW" | grep -n -m 1 "Sources:" | cut -f1 -d:) -2
+))
+SINKS_TRIM=$(\
+    echo "$SINKS_RAW" | \
+    head -n $SINKS_LN_END | \
+    tail -n $(($SINKS_LN_END - $SINKS_LN)) \
+)
+SINKS=""
+while IFS= read -r LINE; do
+    SINKS="$(echo "$LINE" | cut -c 10- | rev | cut -c 12- | rev)\n${SINKS}"
+done <<< "$SINKS_TRIM"
+
+SELECTED_SINK=$(fzf-select \
+    --src "$NOTES_DIR"\
+    --title "$TITLE"\
+    --prompt "$PROMPT"\
+    --opts "$SINKS"
+)
+
+[ -z "$SELECTED_SINK" ] && exit 1
+NEW_DEFAULT=$(echo "$SELECTED_SINK" | cut -d "." -f1)
+
+echo "Setting sink..."
+! wpctl set-default "$SELECTED_SINK" &&
+    echo "Error setting the default sink: $?" && exit 1
+echo "Done."
+

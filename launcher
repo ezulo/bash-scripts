@@ -1,14 +1,25 @@
-#!/bin/echo Please-Source
+#!/usr/bin/env bash
 
-ID="$_ID:launcher"
-ARG="$1" && shift
-OPTS_FILE="${1:-$ZMENU_INCLUDE_DIR/launcher_options}" && shift
-OPTS_FILE_BACKUP="${1:-$XDG_CACHE_HOME/zmenu/launcher/options_backup}"
-OPTS_FILE_RECENTS="${1:-$XDG_CACHE_HOME/zmenu/launcher/recent}"
+# 
+# Application Launcher
+#
 
+#set -e
+
+TITLE="Launcher"
+LAUNCH_PROMPT="Launch an Application"
+CONFIG_PROMPT="Select an Action"
+EDITOR=${EDITOR:-"nvim"}
+
+OPTS_FILE=$HOME/.launcher/options
+OPTS_FILE_BACKUP="$XDG_CACHE_HOME/launcher/options_backup"
+OPTS_FILE_RECENTS="$XDG_CACHE_HOME/launcher/recent"
 [ ! -d "$(dirname "$OPTS_FILE")" ]          && mkdir -p "$(dirname "$OPTS_FILE")" 
 [ ! -d "$(dirname "$OPTS_FILE_BACKUP")" ]   && mkdir -p "$(dirname "$OPTS_FILE_BACKUP")" 
 [ ! -d "$(dirname "$OPTS_FILE_RECENTS")" ]  && mkdir -p "$(dirname "$OPTS_FILE_RECENTS")" 
+
+MODE=LAUNCH
+[[ "$@" =~ "--config" ]] && MODE=CONFIG
 
 trim_whitespace() {
     while IFS= read -r LINE; do
@@ -17,7 +28,7 @@ trim_whitespace() {
 }
 
 reset_recents() {
-    [[ "$@ " =~ "--force " ]] || [ ! -f "$OPTS_FILE_RECENTS" ] &&
+    [[ "$@ " =~ "--force " || -f "$OPTS_FILE_RECENTS" ]] &&
         cp "$OPTS_FILE" "$OPTS_FILE_RECENTS"
 }
 
@@ -67,9 +78,8 @@ update_opts() {
     editor_header           >  "$TMP"
     get_opts --no_recent    >> "$TMP"
     local SUM=$(sha256sum "$TMP")
-    kitty-edit "$TMP" '-c $'
-    [ "$SUM" == "$(sha256sum $TMP)" ] &&
-        log_info "$ID" "Aborted." && return 0
+    "$EDITOR" "$TMP" '-c $'
+    [ "$SUM" == "$(sha256sum $TMP)" ] && return 0
     mv "$OPTS_FILE" "$OPTS_FILE_BACKUP"
     touch "$OPTS_FILE"
     while IFS= read LINE; do
@@ -80,7 +90,6 @@ update_opts() {
         [ -z "$CMD" ] && CMD="$NAME"
         printf "%s: %s\n" "$NAME" "$CMD" >> "$OPTS_FILE"
     done < "$TMP"
-    log_info "$ID" "Launcher updated."
     reset_recents --force
     rm "$TMP"
 }
@@ -108,8 +117,12 @@ editor_header() {
 config_mode() {
     local ID="$ID:config"
     local TMP_FILE=$(mktemp)
-    local SUBOPT=$(fzf_select "$ID" "configure the launcher" "edit\nclear history\nrestore backup")
-    case $SUBOPT in
+    local ACTION=$(fzf-select \
+        --title "Launcher Configuration" \
+        --prompt "Select an Action" \
+        --opts "edit\nclear history\nrestore backup" \
+    )
+    case $ACTION in
         edit)
             editor_header           >  "$TMP_FILE"
             get_opts --no_recent    >> "$TMP_FILE"
@@ -117,30 +130,47 @@ config_mode() {
             rm "$TMP_FILE"
             ;;
         restore*)
-            restore_opts && log_info "$ID" "Backup restored."
+            echo "Restoring options..."
+            restore_opts
             ;;
         clear*)
+            echo "Clearing recents..."
             reset_recents --force
-            log_info "$ID" "History cleared."
             ;;
         *)
+            echo "ERROR: $ACTION is not an option"
             return 1
             ;;
     esac
+    echo "Done."
     return 0
 }
 
+launch() { 
+    nohup $@ > /dev/null 2>&1 &
+    sleep 0.001 # Give the process time to get a new pgid
+}
 launcher_mode() {
     local ID="$ID"
     local LAUNCHER_NAMES=$(get_opts --name)
-    local OPT_NAME=$(fzf_select "$ID" "launch an application" "$LAUNCHER_NAMES")
+    local OPT_NAME=$(fzf-select \
+        --title "Launcher" \
+        --prompt "Launch an Application" \
+        --opts "$LAUNCHER_NAMES" \
+    )
     [ -z "$OPT_NAME" ] && return 1
-    local CMD=$(lookup_opt "$OPT_NAME" || log_info "$ID" "error")
-    [ -z "$CMD" ] && return 1
-    update_recents "$OPT_NAME" "$CMD"
-    $CMD > /dev/null 2>&1 & disown
-}
+    local OPT="$(lookup_opt "$OPT_NAME")"
+    [ -z "$OPT" ] && return 1
+    update_recents "$OPT_NAME" "$OPT"
+    launch "$OPT"
+} 
 
-[ "$ARG" == "--config" ]        && config_mode
-[ -z "$ARG" ]                   && launcher_mode
+case $MODE in
+    CONFIG)
+        config_mode
+        ;;
+    LAUNCH)
+        launcher_mode
+        ;;
+esac
 

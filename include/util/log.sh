@@ -15,9 +15,6 @@
 # ```
 #
 
-! [ -z "$UTIL_LOG_SOURCED" ] && return 0
-export UTIL_LOG_SOURCED=1
-
 UTIL_DIR=${UTIL_DIR:-"$XDG_CONFIG_HOME/scripts/include/util"}
 LOG_DIR=${LOG_DIR:-"$XDG_CONFIG_HOME/scripts/log"}
 LL_FILE="$UTIL_DIR/log-level"
@@ -83,8 +80,8 @@ __log() {
     [ ! -z "$NOTIFY_CMD" ] && ($NOTIFY_CMD "${LOG[0]}" "${LOG[1]}")
     # Log to file (if provided)
     BASE_ID=$(echo "$ID" | cut -d ':' -f1)
-    [ ! -z $LOG_TO_FILE ] && LOG_FILE="$LOG_DIR/$(date +%Y_%m_%d)_${BASE_ID}.log" &&
-        echo "$(date +%Y_%m_%d\|%H:%M:%S)\|$LOG_ECHO" | tee -a "$LOG_FILE"
+    [ ! -z $LOG_TO_FILE ] && LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d)_${BASE_ID}.log" &&
+        echo "$(date +%Y-%m-%d\|%H:%M:%S)|$LOG_ECHO" | tee -a "$LOG_FILE"
     # Log to stderr (unless --silent)
     [ -z "$SILENT" ] && echo "$LOG_ECHO" >&2
 }

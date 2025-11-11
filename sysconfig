@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# 
+# System Configuration
+# Just makes opening configs a little faster
+#
+
+set -e
+
+TITLE="System Configuration"
+PROMPT="Select a configuration directory."
+EDITOR=${EDITOR:-"nvim -c NvimTreeOpen"}
+
+OPTS=$(find $XDG_CONFIG_HOME -mindepth 1 -maxdepth 1 -not -name '.*' -type d)
+DIRECTORY=$(fzf-select --title "$TITLE" --prompt "$PROMPT" --opts "$OPTS")
+
+kitty --detach -d "$XDG_CONFIG_HOME" /bin/bash -c "$EDITOR $DIRECTORY"
+

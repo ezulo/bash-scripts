@@ -14,7 +14,7 @@ export THEME=$(cat "$THEME_HOME/current-theme")
 TERMINAL="kitty"
 EDITOR="nvim"
 
-OPT=$(d_read "$ID" "$OPTS")
+OPT=$(fzf_select "THEME" "Select a theme action" "$OPTS")
 [ -z "$OPT" ] && exit 1
 
 AV_THEMES="$($THEMECTL ls)"
@@ -25,7 +25,7 @@ case $OPT in
         ;;
     set)
         ID="$ID:set"
-        THEME_OPT=$(d_read "$ID" "$AV_THEMES" "set theme")
+        THEME_OPT=$(fzf_select "$ID" "Set Theme" "$AV_THEMES")
         [ -z $(echo "$AV_THEMES" | grep "^$THEME_OPT\$") ] &&
             log_error "$ID" "Theme not found: $THEME_OPT" && exit 1
         $("$THEMECTL" set "$THEME_OPT")
@@ -42,7 +42,7 @@ case $OPT in
         ID="$ID:create"
         SRC_THEME=
         d_read_yes_no "$ID" "duplicate existing?" &&
-            SRC_THEME=$(d_read "$ID" "$AV_THEMES" "source theme") &&
+            SRC_THEME=$(fzf_select "$ID" "Select a Theme to Duplicate" "$AV_THEMES") &&
             [ -z $(echo "$AV_THEMES" | grep "^$SRC_THEME\$") ] &&
                 log_error "$ID" "Theme not found: $THEME_OPT" && exit 1
         NEW_THEME=$(k_read "$ID" "What would you like to name your new theme?")

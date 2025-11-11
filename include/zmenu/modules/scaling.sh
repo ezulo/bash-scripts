@@ -35,7 +35,7 @@ for VALUE in "${SCALING_VALUES[@]}"; do
     [ "$CURRENT_VALUE" = "$VALUE%" ] && OPTS+=" (current)"
     OPTS+="\n"
 done
-OPT=$(d_read "$ID" "$OPTS" "$MENU_PROMPT" | cut -d'%' -f1)
+OPT=$(fzf_select "$ID" "$MENU_PROMPT" "$OPTS" | cut -d'%' -f1)
 [ -z $OPT] && exit 1
 
 case $OPT in

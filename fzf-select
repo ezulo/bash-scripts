@@ -1,0 +1,50 @@
+#!/bin/env bash
+
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$XDG_CONFIG_HOME/scripts/include/util/log.sh"
+
+#
+# Arguments
+#
+
+OPTS=
+PROMPT="select an option"
+TITLE="fzf-select"
+OUT_FILE="$XDG_CACHE_HOME/fzf.out"
+while ! [ -z "$1" ]; do
+    [ "$1" == "--opts" ] && shift && OPTS="$1"
+    [ "$1" == "--out" ] && shift && OUT_FILE="$1"
+    [ "$1" == "--prompt" ] && shift && PROMPT="$1"
+    [ "$1" == "--title" ] && shift && TITLE="$1"
+    shift
+done
+
+[ -z "$OPTS" ] && log_error "$ID:fzf-select" "No options" --silent && exit 1
+
+# Color definitions
+source "$MY_DIR/include/util/themecolor.sh"
+COLOR_BORDER=$(c 15)
+COLOR_BORDER_LABEL=$(c 15)
+COLOR_HEADER=$(c 15)
+COLOR_LIST_BORDER=$(c 2)
+COLOR_LIST_LABEL=$(c 10)
+COLOR_INPUT_BORDER=$(c 1)
+COLOR_INPUT_LABEL=$(c 1)
+COLOR_HEADER_BORDER=$(c 4)
+COLOR_HEADER_LABEL=$(c 12)
+COLOR_PREVIEW_BORDER=$(c 15)
+COLOR_PREVIEW_LABEL=$(c 15)
+BORDER_LABEL=" $TITLE "
+INPUT_LABEL=" $PROMPT "
+
+# Flags
+source "$MY_DIR/include/fzf/flags_base.sh"
+FLAGS+=(
+    "--style full"
+)
+
+SELECTED=$(echo -e "$OPTS" | eval fzf "${FLAGS[@]}")
+[ -z "$SELECTED" ] && echo "No option selected." && exit 1
+! [ -z "$OUT_FILE" ] && echo "$SELECTED" > "$OUT_FILE"
+echo "${SELECTED}"
+

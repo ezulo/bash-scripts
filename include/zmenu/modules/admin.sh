@@ -5,7 +5,11 @@ ID="$_ID:admin"
 OPTS="\
 clear zmenu cache"
 
-OPT=$(d_read "$ID" "$OPTS" "What would you like to do?")
+kitty_callback() {
+    CMD="fzf-select $1 $2 $@"
+}
+
+OPT=$(fzf_select "$ID" "What would you like to do?" "$OPTS")
 
 case $OPT in
     clear*)

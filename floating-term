@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+#
+# A script for running a floating terminal, with a single command.
+# 
+
+#set -x
+set -e
+
+ID="floating-term"
+TERM="kitty"
+DEFAULT_WINDOW_WIDTH=800
+DEFAULT_WINDOW_HEIGHT=800
+
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$MY_DIR"/include/util/log.sh
+
+__term_close_all() {
+    hyprctl dispatch killwindow "class:floating-term" > /dev/null 2>&1
+}
+
+__term_spawn() {
+    __term_close_all
+    local WINDOW_CLASS="${ID:-"${_ID}"}"
+    local WINDOW_WIDTH="$DEFAULT_WINDOW_WIDTH"
+    local WINDOW_HEIGHT="$DEFAULT_WINDOW_HEIGHT"
+    local NO_OUTPUT= # Some things, like neovim, don't work well with their stdout being piped.
+    local TERM_FLAGS=()
+    local FIFO="$(mktemp -u)"
+    mkfifo -m 600 "$FIFO"
+    while ! [ -z "$1" ]; do
+        [ "$1" == "--" ] && shift && break
+        case "$1" in
+            '--width='*)    WINDOW_WIDTH=$(cut -d '=' -f2 <<< "$1") ;;
+            '--height='*)   WINDOW_HEIGHT=$(cut -d '=' -f2 <<< "$1") ;;
+            '--class='*)    WINDOW_CLASS=$(cut -d '=' -f2 <<< "$1") ;;
+            '--no-output')  NO_OUTPUT=1;;
+            *) TERM_FLAGS+=("$1") ;;
+        esac
+        shift
+    done
+    # Currently, these are set for kitty
+    TERM_FLAGS+=(
+        "--override=map Ctrl+Esc close"
+        "--override=confirm_os_window_close 0"
+        "--override=initial_window_width $WINDOW_WIDTH"
+        "--override=initial_window_height $WINDOW_HEIGHT"
+    )
+    if [ -z "$NO_OUTPUT" ]; then
+        "$TERM" --class $WINDOW_CLASS "${TERM_FLAGS[@]}" /bin/bash -c \
+            "$@ >$FIFO" > /dev/null 2>&1 &
+        cat "$FIFO"
+    else
+        "$TERM" --class $WINDOW_CLASS "${TERM_FLAGS[@]}" /bin/bash -c \
+            "$@" > /dev/null 2>&1
+    fi
+}
+
+__term_spawn "$@"
+

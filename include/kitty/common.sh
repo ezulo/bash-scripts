@@ -8,6 +8,8 @@ _ID="kitty"
 DEFAULT_WINDOW_WIDTH=800
 DEFAULT_WINDOW_HEIGHT=800
 
+CMD_QUEUE=()
+
 kitty_close_all() {
     hyprctl dispatch killwindow "class:kitty-.*" > /dev/null 2>&1
 }
@@ -33,10 +35,7 @@ kitty_spawn() {
     local WINDOW_CLASS="${ID:-"${_ID}"}"
     local WINDOW_WIDTH="$DEFAULT_WINDOW_WIDTH"
     local WINDOW_HEIGHT="$DEFAULT_WINDOW_HEIGHT"
-    local CMD="$1" && shift
-    [ -z "$CMD" ] && return 1
     local KITTY_FLAGS=()
-    local CMD_FLAGS=()
     while ! [ -z "$1" ]; do
         [ "$1" == "--" ] && shift && break
         case "$1" in
@@ -55,15 +54,12 @@ kitty_spawn() {
         esac
         shift
     done
-    while ! [ -z "$1" ]; do 
-        CMD_FLAGS+=("$1") && shift;
-    done
     KITTY_FLAGS+=(
         "--override=map Ctrl+Esc close"
         "--override=confirm_os_window_close 0"
         "--override=initial_window_width $WINDOW_WIDTH"
         "--override=initial_window_height $WINDOW_HEIGHT"
     )
-    kitty --class $WINDOW_CLASS "${KITTY_FLAGS[@]}" $CMD "${CMD_FLAGS[@]}"
+    kitty -1 --class $WINDOW_CLASS "${KITTY_FLAGS[@]}" "$@"
 }
 

@@ -1,15 +1,18 @@
-#!/bin/echo Please-Source
+#!/bin/env bash
 
-ID="$_ID:session"
+# 
+# Application Launcher
+#
 
-OPTS="\
-logout
-lock
-sleep
-shutdown
-reboot"
+set -e
 
-OPT=$(fzf_select "$ID" "select an action" "$OPTS")
+TITLE="Session"
+PROMPT="Select an Action"
+EDITOR=${EDITOR:-"nvim"}
+
+OPTS="logout\nlock\nsleep\nshutdown\nreboot"
+
+OPT=$(fzf-select --title "$TITLE" --prompt "select an action" --opts "$OPTS")
 
 case $OPT in
     "logout")

@@ -49,7 +49,7 @@ for OPTS_I in "${OPTS[@]}"; do
     MENU_OPTS="$MENU_OPTS\n$OPTS_I"
 done
 
-MENU_OUT=$(d_read "$ID" "$MENU_OPTS" "$MENU_PROMPT_MAIN")
+MENU_OUT=$(fzf_select "$ID" "$MENU_PROMPT_MAIN" "$MENU_OPTS")
 OPT=$(cut -d '|' -f1 <<< "$MENU_OUT" | xargs)
 NUM_RE='^[+-]?[0-9]+([.][0-9]+)?$'
 

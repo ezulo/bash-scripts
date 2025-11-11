@@ -1,0 +1,77 @@
+#!/bin/env bash
+
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+#
+# Arguments
+#
+
+PREVIEW=
+DIRECTORY="$HOME"
+DIRECTORY_DEPTH=
+PROMPT=
+TITLE=
+EXT_OPTS=
+OUT_FILE=
+while ! [ -z "$1" ]; do
+    [ "$1" == "--preview" ] && shift && PREVIEW="$1"
+    [ "$1" == "--src" ] && shift && DIRECTORY="$1"
+    [ "$1" == "--out" ] && shift && OUT_FILE="$1"
+    [ "$1" == "--depth" ] && shift && DIRECTORY_DEPTH="$1"
+    [ "$1" == "--prompt" ] && shift && PROMPT="$1"
+    [ "$1" == "--title" ] && shift && TITLE="$1"
+    [ "$1" == "--opt" ] && shift && EXT_OPTS+="$1\n"
+    shift
+done
+
+# Remove trailing forward slash, if present
+[ "${DIRECTORY: -1}" == "/" ] && DIRECTORY="${DIRECTORY%?}"
+
+! [ -d "$DIRECTORY" ] && echo "Directory not found: $DIRECTORY" >&2 && exit 1
+
+# Color definitions
+source "$MY_DIR/include/util/themecolor.sh"
+COLOR_BORDER=$(c 15)
+COLOR_BORDER_LABEL=$(c 15)
+COLOR_HEADER=$(c 15)
+COLOR_LIST_BORDER=$(c 2)
+COLOR_LIST_LABEL=$(c 10)
+COLOR_INPUT_BORDER=$(c 1)
+COLOR_INPUT_LABEL=$(c 1)
+COLOR_HEADER_BORDER=$(c 4)
+COLOR_HEADER_LABEL=$(c 12)
+COLOR_PREVIEW_BORDER=$(c 15)
+COLOR_PREVIEW_LABEL=$(c 15)
+BORDER_LABEL=" ${TITLE:-"fzf-files"} "
+INPUT_LABEL=" ${PROMPT:-"Select a File"} "
+HEADER_LABEL=" File Type " #?
+PREVIEW="$PREVIEW"
+DIRECTORY="$DIRECTORY"
+
+# Flags
+FLAGS=
+source "$MY_DIR/include/fzf/flags_base.sh"
+FLAGS+=(
+    "--style full"
+    "--bind 'focus:+transform-header:file -E --brief $DIRECTORY/{} || echo no file selected'"
+    "--bind 'focus:+transform-header:stat "$DIRECTORY"/{} >/dev/null 2>&1 &&\
+        file --brief $DIRECTORY/{} || echo ---'"
+    "--bind 'ctrl-r:change-list-label( Reloading the list )+reload(sleep 2; git ls-files)' "
+    "--color header-border:$COLOR_HEADER_BORDER,header-label:$COLOR_HEADER_LABEL"
+)
+! [ -z "$PREVIEW" ] && FLAGS+=(
+    "--preview '$PREVIEW'"
+    "--preview-window 'right,70%'"
+    "--color preview-border:$COLOR_PREVIEW_BORDER,preview-label:$COLOR_PREVIEW_LABEL"
+    "--bind result:transform-list-label:'[[ -z \$FZF_QUERY ]] && echo \" \$FZF_MATCH_COUNT items \" || echo \" \$FZF_MATCH_COUNT matches for [\$FZF_QUERY] \"'"
+)
+
+# Build option list (sorted by most recent)
+OPTS="$EXT_OPTS"
+OPTS+=$(find "$DIRECTORY" -type f -exec ls -1t "{}" + | sed "s|^$DIRECTORY/||")
+
+SELECTED=$(echo -e "$OPTS" | eval fzf "${FLAGS[@]}")
+[ -z "$SELECTED" ] && echo "No file selected." && exit 1
+! [ -z "$OUT_FILE" ] && mkdir -p $(dirname "$OUT_FILE") && echo "$SELECTED" > "$OUT_FILE"
+echo "${SELECTED}"
+

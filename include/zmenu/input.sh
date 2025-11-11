@@ -10,8 +10,6 @@ KPROMPT_CMD="kitty-prompt"
 FZF_CMD_FILES="fzf-files"
 FZF_CMD_SELECT="fzf-select"
 
-FZY_CMD_SELECT="fzy-select"
-
 # An output file for subprocesses, so this script may see the output
 SUB_OUT_FILE="$XDG_CACHE_HOME/zmenu.out"
 
@@ -79,14 +77,18 @@ fzf_file_select() {
     local ID="$1"       && shift
     local PROMPT="$1"   && shift
     local SRC_DIR="$1"  && shift
-    "$FZF_CMD_FILES" --title "$ID" --src "$SRC_DIR" --prompt "$PROMPT" --out "$SUB_OUT_FILE" "$@"
+    kitty-cmd "$FZF_CMD_FILES" --width=1200 --\
+        --title "$ID" --src "$SRC_DIR" --prompt "$PROMPT" --out "$SUB_OUT_FILE" "$@"
+    cat "$SUB_OUT_FILE" && rm "$SUB_OUT_FILE"
 }
 
 fzf_select() {
     local ID="$1"       && shift
     local PROMPT="$1"   && shift
     local OPTS="$1"     && shift
-    "$FZF_CMD_SELECT" --title "$ID" --prompt "$PROMPT" --opts "$OPTS" --out "$SUB_OUT_FILE" "$@"
+    kitty-cmd "$FZF_CMD_SELECT" -- \
+        --title "$ID" --prompt "$PROMPT" --opts "$OPTS" --out "$SUB_OUT_FILE" "$@"
+    cat "$SUB_OUT_FILE" && rm "$SUB_OUT_FILE"
 }
 
 _cache_read_n() {
