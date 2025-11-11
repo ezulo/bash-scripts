@@ -4,6 +4,7 @@ set -e
 
 [ -z "$NFS_BACKUPS" ] && echo "Set \$NFS_BACKUPS before backing up system." >&2 && exit 1
 [ "$(whoami)" == "root" ] && echo "Running this as root? Seriously?" >&2 && exit 1
+! stat "$NFS_BACKUPS" > /dev/null 2>&1 && echo "Could not stat: $NFS_BACKUPS" && exit 1
 
 # Defaults
 MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
