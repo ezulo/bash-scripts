@@ -1,0 +1,12 @@
+.config
+Documents
+Downloads
+.librewolf
+.local/bin
+.local/share
+Notes
+Pictures
+Projects
+.ssh
+.bashrc
+.gitconfig

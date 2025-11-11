@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -e
+
+[ -z "$NFS_BACKUPS" ] && echo "Set \$NFS_BACKUPS before backing up system." >&2 && exit 1
+[ "$(whoami)" == "root" ] && echo "Running this as root? Seriously?" >&2 && exit 1
+
+# Defaults
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+HOSTNAME="$(hostname -f)"
+BACKUP_DIR="$HOME"
+DEST_DIR="$NFS_BACKUPS/$HOSTNAME"
+MANIFEST="$MY_DIR/include/backup-desktop/manifest"
+
+# Args (not supported currently)
+
+# Validation
+! [ -d "$DEST_DIR" ] && echo "Directory missing: $DEST_DIR" >&2 && exit 1
+[ -z "$MANIFEST" ] && echo "No manifest file found at: $MANIFEST" >&2 && exit 1
+
+TIMESTAMP="$(date +%Y-%m-%d)"
+OUT_FILE="$DEST_DIR/$TIMESTAMP.zip"
+[ "$1" == "--force" ] && rm -f "$OUT_FILE" # WE ARE REMOVING SHIT, DO NOT RUN AS ROOT
+[ -f "$OUT_FILE" ] && echo "Daily backup was already created: $OUT_FILE" >&2 && exit 0
+
+echo "Backup commence." 
+while read FILE; do
+    echo "$FILE..."
+    echo "$BACKUP_DIR/$FILE" | zip -@ "$OUT_FILE"
+done < "$MANIFEST"
+echo "Done."
+
