@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-# 
+#
 # Selects a note with fzf and opens it in the editor
 #
 
@@ -12,25 +12,27 @@ NOTES_DIR="$HOME/Notes"
 PREVIEW="cat '$NOTES_DIR/{}' 2> /dev/null || echo {}"
 EDITOR=${EDITOR:-"nvim"}
 
+[ ! -d "$NOTES_DIR" ] && mkdir -p "$NOTES_DIR"
+
 CREATE_NEW='[ Create new... ]'
 
-NOTE=$(fzf-files \
-    --src "$NOTES_DIR"\
-    --title "$TITLE"\
-    --prompt "$MYPROMPT"\
-    --preview "$PREVIEW"\
+NOTE=$(
+  fzf-files \
+    --src "$NOTES_DIR" \
+    --title "$TITLE" \
+    --prompt "$MYPROMPT" \
+    --preview "$PREVIEW" \
     --opt "$CREATE_NEW"
 )
 
 md_extension() { ! [[ "$1" =~ \.md$ ]] && echo "$1.md" || echo "$1"; }
 
 if [[ "$NOTE" == "$CREATE_NEW" ]]; then
-    TIMESTAMP="$(date +"%Y-%m-%dT%H:%M:%S%z")"
-    FILENAME_DEFAULT="$TIMESTAMP.md"
-    FILENAME="$(prompt -p "Enter a filename ( default: $TIMESTAMP.md )")"
-    [ -z "$FILENAME" ] && FILENAME="$FILENAME_DEFAULT"
-    NOTE="$(md_extension "$FILENAME")"
+  TIMESTAMP="$(date +"%Y-%m-%dT%H:%M:%S%z")"
+  FILENAME_DEFAULT="$TIMESTAMP.md"
+  FILENAME="$(prompt -p "Enter a filename ( default: $TIMESTAMP.md )")"
+  [ -z "$FILENAME" ] && FILENAME="$FILENAME_DEFAULT"
+  NOTE="$(md_extension "$FILENAME")"
 fi
 
 kitty --detach -d "$NOTES_DIR" /bin/bash -c "$EDITOR $NOTE"
-
