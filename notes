@@ -17,22 +17,23 @@ EDITOR=${EDITOR:-"nvim"}
 CREATE_NEW='[ Create new... ]'
 
 NOTE=$(
-  fzf-files \
-    --src "$NOTES_DIR" \
-    --title "$TITLE" \
-    --prompt "$MYPROMPT" \
-    --preview "$PREVIEW" \
-    --opt "$CREATE_NEW"
+    fzf-files \
+        --src "$NOTES_DIR" \
+        --title "$TITLE" \
+        --prompt "$MYPROMPT" \
+        --preview "$PREVIEW" \
+        --opt "$CREATE_NEW"
 )
 
 md_extension() { ! [[ "$1" =~ \.md$ ]] && echo "$1.md" || echo "$1"; }
 
 if [[ "$NOTE" == "$CREATE_NEW" ]]; then
-  TIMESTAMP="$(date +"%Y-%m-%dT%H:%M:%S%z")"
-  FILENAME_DEFAULT="$TIMESTAMP.md"
-  FILENAME="$(prompt -p "Enter a filename ( default: $TIMESTAMP.md )")"
-  [ -z "$FILENAME" ] && FILENAME="$FILENAME_DEFAULT"
-  NOTE="$(md_extension "$FILENAME")"
+    TIMESTAMP="$(date +"%Y-%m-%dT%H:%M:%S%z")"
+    FILENAME_DEFAULT="$TIMESTAMP.md"
+    FILENAME="$(prompt -p "Enter a filename ( default: $TIMESTAMP.md )")"
+    [ -z "$FILENAME" ] && FILENAME="$FILENAME_DEFAULT"
+    ! [[ "$FILENAME" =~ ^"$NOTES_DIR" ]] && exit 1
+    NOTE="$(md_extension "$FILENAME")"
 fi
 
 kitty --detach -d "$NOTES_DIR" /bin/bash -c "$EDITOR $NOTE"
