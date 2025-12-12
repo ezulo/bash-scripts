@@ -80,8 +80,11 @@ __log() {
     [ ! -z "$NOTIFY_CMD" ] && ($NOTIFY_CMD "${LOG[0]}" "${LOG[1]}")
     # Log to file (if provided)
     BASE_ID=$(echo "$ID" | cut -d ':' -f1)
-    [ ! -z $LOG_TO_FILE ] && LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d)_${BASE_ID}.log" &&
+    if [ ! -z $LOG_TO_FILE ]; then
+	LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d)_${BASE_ID}.log"
+	[ ! -d "$(dirname "$LOG_FILE")" ] && mkdir -p "$(dirname "$LOG_FILE")" 
         echo "$(date +%Y-%m-%d\|%H:%M:%S)|$LOG_ECHO" | tee -a "$LOG_FILE"
+    fi
     # Log to stderr (unless --silent)
     [ -z "$SILENT" ] && echo "$LOG_ECHO" >&2
 }
