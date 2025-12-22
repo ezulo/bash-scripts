@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+MY_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 #
 # Arguments
@@ -61,7 +61,7 @@ FLAGS+=(
 )
 ! [ -z "$PREVIEW" ] && FLAGS+=(
     "--preview '$PREVIEW'"
-    "--preview-window 'right,70%'"
+    "--preview-window 'right,66%'"
     "--color preview-border:$COLOR_PREVIEW_BORDER,preview-label:$COLOR_PREVIEW_LABEL"
     "--bind result:transform-list-label:'[[ -z \$FZF_QUERY ]] && echo \" \$FZF_MATCH_COUNT items \" || echo \" \$FZF_MATCH_COUNT matches for [\$FZF_QUERY] \"'"
 )
@@ -72,6 +72,5 @@ OPTS+=$(find "$DIRECTORY" -type f -exec ls -1t "{}" + | sed "s|^$DIRECTORY/||")
 
 SELECTED=$(echo -e "$OPTS" | eval fzf "${FLAGS[@]}")
 [ -z "$SELECTED" ] && echo "No file selected." && exit 1
-! [ -z "$OUT_FILE" ] && mkdir -p $(dirname "$OUT_FILE") && echo "$SELECTED" > "$OUT_FILE"
+! [ -z "$OUT_FILE" ] && mkdir -p $(dirname "$OUT_FILE") && echo "$SELECTED" >"$OUT_FILE"
 echo "${SELECTED}"
-
