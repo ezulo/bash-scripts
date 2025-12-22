@@ -71,7 +71,7 @@ __log() {
     local LEVEL="$1"    && shift && ! __log_filter $LEVEL && return 0
     local ID="$1"       && shift
     local MSG="$1"      && shift
-    local SILENT=$([[ "$@" =~ "--silent " ]] && echo 1)
+    local SILENT=$([ "$1" = "--silent" ] && echo "true")
     local LOG=("$ID:$LEVEL" "$MSG")
     local LOG_ECHO=$(sed -e 's/\\n/ /g' <<< "${LOG[0]} | ${LOG[1]}")
     local NOTIFY_CMD_IDX=$(__log_level_value "$LEVEL")
@@ -83,9 +83,10 @@ __log() {
     if [ ! -z $LOG_TO_FILE ]; then
 	LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d)_${BASE_ID}.log"
 	[ ! -d "$(dirname "$LOG_FILE")" ] && mkdir -p "$(dirname "$LOG_FILE")" 
-        echo "$(date +%Y-%m-%d\|%H:%M:%S)|$LOG_ECHO" | tee -a "$LOG_FILE"
+        echo "$(date +%Y-%m-%d\|%H:%M:%S)|$LOG_ECHO" >> "$LOG_FILE"
     fi
     # Log to stderr (unless --silent)
     [ -z "$SILENT" ] && echo "$LOG_ECHO" >&2
+    return 0
 }
 
