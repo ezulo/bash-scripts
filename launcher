@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 
-# 
+#
 # Application Launcher
 #
 
 #set -e
 
 TITLE="Launcher"
-LAUNCH_PROMPT="Launch an Application"
+LAUNCH_PROMPT="Run a Command"
 CONFIG_PROMPT="Select an Action"
 EDITOR=${EDITOR:-"nvim"}
 
 OPTS_FILE=$HOME/.launcher/options
 OPTS_FILE_BACKUP="$XDG_CACHE_HOME/launcher/options_backup"
 OPTS_FILE_RECENTS="$XDG_CACHE_HOME/launcher/recent"
-[ ! -d "$(dirname "$OPTS_FILE")" ]          && mkdir -p "$(dirname "$OPTS_FILE")" 
-[ ! -d "$(dirname "$OPTS_FILE_BACKUP")" ]   && mkdir -p "$(dirname "$OPTS_FILE_BACKUP")" 
-[ ! -d "$(dirname "$OPTS_FILE_RECENTS")" ]  && mkdir -p "$(dirname "$OPTS_FILE_RECENTS")" 
+[ ! -d "$(dirname "$OPTS_FILE")" ] && mkdir -p "$(dirname "$OPTS_FILE")"
+[ ! -d "$(dirname "$OPTS_FILE_BACKUP")" ] && mkdir -p "$(dirname "$OPTS_FILE_BACKUP")"
+[ ! -d "$(dirname "$OPTS_FILE_RECENTS")" ] && mkdir -p "$(dirname "$OPTS_FILE_RECENTS")"
 
 MODE=LAUNCH
 [[ "$@" =~ "--config" ]] && MODE=CONFIG
@@ -28,13 +28,13 @@ trim_whitespace() {
 }
 
 reset_recents() {
-    [[ "$@ " =~ "--force " || -f "$OPTS_FILE_RECENTS" ]] &&
+    [[ "$@ " =~ "--force " || ! -f "$OPTS_FILE_RECENTS" ]] &&
         cp "$OPTS_FILE" "$OPTS_FILE_RECENTS"
 }
 
 restore_opts() {
     [ -f "$OPTS_FILE_BACKUP" ] &&
-    mv "$OPTS_FILE_BACKUP" "$OPTS_FILE"
+        mv "$OPTS_FILE_BACKUP" "$OPTS_FILE"
     reset_recents --force
 }
 
@@ -43,20 +43,20 @@ update_recents() {
     local CHOSEN_CMD="$2"
     reset_recents
     local RECENTS_BUF=$(cat "$OPTS_FILE_RECENTS" | sed "\|^$CHOSEN_OPT|d")
-    echo "$CHOSEN_OPT: $CHOSEN_CMD" >   "$OPTS_FILE_RECENTS" # Overwrite
-    echo "$RECENTS_BUF"             >>  "$OPTS_FILE_RECENTS"
+    echo "$CHOSEN_OPT: $CHOSEN_CMD" >"$OPTS_FILE_RECENTS" # Overwrite
+    echo "$RECENTS_BUF" >>"$OPTS_FILE_RECENTS"
 }
 
 get_opts() {
     local CUT="cat"
     local IN_FILE="$OPTS_FILE_RECENTS"
     reset_recents
-    [[ "$@ " =~ "--name "         ]] && CUT="cut -d: -f1"
-    [[ "$@ " =~ "--cmd "          ]] && CUT="cut -d: -f2"
-    [[ "$@ " =~ "--no_recent "    ]] && IN_FILE="$OPTS_FILE"
+    [[ "$@ " =~ "--name " ]] && CUT="cut -d: -f1"
+    [[ "$@ " =~ "--cmd " ]] && CUT="cut -d: -f2"
+    [[ "$@ " =~ "--no_recent " ]] && IN_FILE="$OPTS_FILE"
     while IFS= read -r LINE; do
-        echo "$LINE" | $CUT | trim_whitespace 
-    done < "$IN_FILE"
+        echo "$LINE" | $CUT | trim_whitespace
+    done <"$IN_FILE"
 }
 
 lookup_opt() {
@@ -67,7 +67,7 @@ lookup_opt() {
         CUR_NAME=$(echo "$LINE" | cut -d: -f1 | trim_whitespace)
         CUR_CMD=$(echo "$LINE" | cut -d: -f2 | trim_whitespace)
         [ "$OPT_NAME" == "$CUR_NAME" ] && echo "$CUR_CMD" && return 0
-    done < "$OPTS_FILE"
+    done <"$OPTS_FILE"
     return 1
 }
 
@@ -75,8 +75,8 @@ update_opts() {
     local NAME=
     local CMD=
     local TMP=$(mktemp)
-    editor_header           >  "$TMP"
-    get_opts --no_recent    >> "$TMP"
+    editor_header >"$TMP"
+    get_opts --no_recent >>"$TMP"
     local SUM=$(sha256sum "$TMP")
     "$EDITOR" "$TMP" '-c $'
     [ "$SUM" == "$(sha256sum $TMP)" ] && return 0
@@ -88,8 +88,8 @@ update_opts() {
         CMD=$(echo $LINE | cut -d':' -f2 | trim_whitespace)
         [ -z "$NAME" ] && continue
         [ -z "$CMD" ] && CMD="$NAME"
-        printf "%s: %s\n" "$NAME" "$CMD" >> "$OPTS_FILE"
-    done < "$TMP"
+        printf "%s: %s\n" "$NAME" "$CMD" >>"$OPTS_FILE"
+    done <"$TMP"
     reset_recents --force
     rm "$TMP"
 }
@@ -117,60 +117,61 @@ editor_header() {
 config_mode() {
     local ID="$ID:config"
     local TMP_FILE=$(mktemp)
-    local ACTION=$(fzf-select \
-        --title "Launcher Configuration" \
-        --prompt "Select an Action" \
-        --opts "edit\nclear history\nrestore backup" \
+    local ACTION=$(
+        fzf-select \
+            --title "Launcher Configuration" \
+            --prompt "Select an Action" \
+            --opts "edit\nclear history\nrestore backup"
     )
     case $ACTION in
-        edit)
-            editor_header           >  "$TMP_FILE"
-            get_opts --no_recent    >> "$TMP_FILE"
-            update_opts
-            rm "$TMP_FILE"
-            ;;
-        restore*)
-            echo "Restoring options..."
-            restore_opts
-            ;;
-        clear*)
-            echo "Clearing recents..."
-            reset_recents --force
-            ;;
-        *)
-            echo "ERROR: $ACTION is not an option"
-            return 1
-            ;;
+    edit)
+        editor_header >"$TMP_FILE"
+        get_opts --no_recent >>"$TMP_FILE"
+        update_opts
+        rm "$TMP_FILE"
+        ;;
+    restore*)
+        echo "Restoring options..."
+        restore_opts
+        ;;
+    clear*)
+        echo "Clearing recents..."
+        reset_recents --force
+        ;;
+    *)
+        echo "ERROR: $ACTION is not an option"
+        return 1
+        ;;
     esac
     echo "Done."
     return 0
 }
 
-launch() { 
-    nohup $@ > /dev/null 2>&1 &
+launch() {
+    nohup $@ >/dev/null 2>&1 &
     sleep 0.001 # Give the process time to get a new pgid
 }
 launcher_mode() {
     local ID="$ID"
     local LAUNCHER_NAMES=$(get_opts --name)
-    local OPT_NAME=$(fzf-select \
-        --title "Launcher" \
-        --prompt "Launch an Application" \
-        --opts "$LAUNCHER_NAMES" \
+    local OPT_NAME=$(
+        fzf-select \
+            --title "Launcher" \
+            --prompt "$LAUNCH_PROMPT" \
+            --opts "$LAUNCHER_NAMES"
     )
     [ -z "$OPT_NAME" ] && return 1
     local OPT="$(lookup_opt "$OPT_NAME")"
     [ -z "$OPT" ] && return 1
     update_recents "$OPT_NAME" "$OPT"
     launch "$OPT"
-} 
+}
 
 case $MODE in
-    CONFIG)
-        config_mode
-        ;;
-    LAUNCH)
-        launcher_mode
-        ;;
+CONFIG)
+    config_mode
+    ;;
+LAUNCH)
+    launcher_mode
+    ;;
 esac
-
