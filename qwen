@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+# Dependent on ollama running
+
+set -e
+_ID="qwen"
+MY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$MY_DIR/include/util/log.sh"
+
+# Options
+LLM_MODEL="qwen2.5:3b"  # Model for ollama to run
+TMUX_SESSION="$_ID"     # Set to blank to disable dedicated tmux session
+LOG_DIR="$HOME/Documents/qwen"
+
+LLM_COMMAND="ollama run $LLM_MODEL"
+
+# Preserve a tmux session
+if [ ! -z "$TMUX_SESSION" ] && [ -z "$TMUX" ]; then
+    if ! tmux has-session -t $TMUX_SESSION 2> /dev/null; then
+        tmux new-session -d -s "$TMUX_SESSION" qwen
+        tmux set-option -t "$TMUX_SESSION" status off
+        # Set up session logging
+        mkdir -p "$LOG_DIR"
+        LOG_FILE="$LOG_DIR/session-$(date +%Y%m%d-%H%M%S).log"
+        # tmux pipe-pane -t "$TMUX_SESSION" "cat >> '$LOG_FILE'"
+        tmux pipe-pane -t "$TMUX_SESSION" "sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' >> '$LOG_FILE'"
+    fi
+    tmux attach-session -t "$TMUX_SESSION"
+else
+    "$MY_DIR/ollama-start"
+    TIMEOUT=3
+    COUNTER=0
+    while ! pgrep -x ollama > /dev/null; do
+        sleep 1
+        COUNTER=$(( $COUNTER + 1 ))
+        if [ $COUNTER = $TIMEOUT ]; then
+            log_error "$_ID" "failure to start ollama server."
+            exit 1
+        fi
+    done
+    echo "Starting $LLM_MODEL..."
+    ollama run $LLM_MODEL
+fi
+
+
