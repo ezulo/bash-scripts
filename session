@@ -1,36 +1,26 @@
 #!/bin/env bash
 
-# 
+#
 # Application Launcher
 #
 
 set -e
 
 TITLE="Session"
-PROMPT="Select an Action"
-EDITOR=${EDITOR:-"nvim"}
+OPTS="logout\nlock\nsuspend\nshutdown\nreboot"
+OPT=$(fzf-select --title "$TITLE" --prompt "Select an Action" --opts "$OPTS")
 
-OPTS="logout\nlock\nsleep\nshutdown\nreboot"
-
-OPT=$(fzf-select --title "$TITLE" --prompt "select an action" --opts "$OPTS")
+do_logout() { loginctl terminate-user $USER && sleep 0.1 && pkill -KILL -u $USER; }
+do_lock() { hyprlock -c $HYPRLOCK_CONFIG >/dev/null 2>&1; }
+do_sleep() { systemctl suspend; }
+do_shutdown() { shutdown -ah now; }
+do_reboot() { shutdown -ar now; }
 
 case $OPT in
-    "logout")
-        hyprctl dispatch exit
-        ;;
-    "lock")
-        hyprlock
-        ;;
-    "sleep")
-        systemctl suspend
-        ;;
-    "shutdown")
-        shutdown -ah now
-        ;;
-    "reboot")
-        shutdown -ar now
-        ;;
-    *)
-        exit 1
+"logout") do_logout ;;
+"lock") do_lock ;;
+"suspend") do_sleep ;;
+"shutdown") do_shutdown ;;
+"reboot") do_reboot ;;
+*) exit 1 ;;
 esac
-
