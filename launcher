@@ -4,9 +4,9 @@
 # Application Launcher
 #
 
-#set -e
+set -e
 
-TITLE="Launcher"
+TITLE="launcher"
 LAUNCH_PROMPT="Run a Command"
 CONFIG_PROMPT="Select an Action"
 EDITOR=${EDITOR:-"nvim"}
@@ -14,12 +14,12 @@ EDITOR=${EDITOR:-"nvim"}
 OPTS_FILE=$HOME/.launcher/options
 OPTS_FILE_BACKUP="$XDG_CACHE_HOME/launcher/options_backup"
 OPTS_FILE_RECENTS="$XDG_CACHE_HOME/launcher/recent"
-[ ! -d "$(dirname "$OPTS_FILE")" ] && mkdir -p "$(dirname "$OPTS_FILE")"
-[ ! -d "$(dirname "$OPTS_FILE_BACKUP")" ] && mkdir -p "$(dirname "$OPTS_FILE_BACKUP")"
-[ ! -d "$(dirname "$OPTS_FILE_RECENTS")" ] && mkdir -p "$(dirname "$OPTS_FILE_RECENTS")"
+if [ ! -d "$(dirname "$OPTS_FILE")" ]; then         mkdir -p "$(dirname "$OPTS_FILE")"; fi
+if [ ! -d "$(dirname "$OPTS_FILE_BACKUP")" ]; then  mkdir -p "$(dirname "$OPTS_FILE_BACKUP")"; fi
+if [ ! -d "$(dirname "$OPTS_FILE_RECENTS")" ]; then mkdir -p "$(dirname "$OPTS_FILE_RECENTS")"; fi
 
 MODE=LAUNCH
-[[ "$@" =~ "--config" ]] && MODE=CONFIG
+if [[ "$@" =~ "--config" ]]; then MODE=CONFIG; fi
 
 trim_whitespace() {
     while IFS= read -r LINE; do
@@ -28,13 +28,15 @@ trim_whitespace() {
 }
 
 reset_recents() {
-    [[ "$@ " =~ "--force " || ! -f "$OPTS_FILE_RECENTS" ]] &&
+    if [[ "$@ " =~ "--force " || ! -f "$OPTS_FILE_RECENTS" ]]; then
         cp "$OPTS_FILE" "$OPTS_FILE_RECENTS"
+    fi
 }
 
 restore_opts() {
-    [ -f "$OPTS_FILE_BACKUP" ] &&
+    if [ -f "$OPTS_FILE_BACKUP" ]; then
         mv "$OPTS_FILE_BACKUP" "$OPTS_FILE"
+    fi
     reset_recents --force
 }
 
@@ -51,9 +53,9 @@ get_opts() {
     local CUT="cat"
     local IN_FILE="$OPTS_FILE_RECENTS"
     reset_recents
-    [[ "$@ " =~ "--name " ]] && CUT="cut -d: -f1"
-    [[ "$@ " =~ "--cmd " ]] && CUT="cut -d: -f2"
-    [[ "$@ " =~ "--no_recent " ]] && IN_FILE="$OPTS_FILE"
+    if [[ "$@ " =~ "--name " ]]; then CUT="cut -d: -f1"; fi
+    if [[ "$@ " =~ "--cmd " ]]; then CUT="cut -d: -f2"; fi
+    if [[ "$@ " =~ "--no_recent " ]]; then IN_FILE="$OPTS_FILE"; fi
     while IFS= read -r LINE; do
         echo "$LINE" | $CUT | trim_whitespace
     done <"$IN_FILE"
@@ -66,7 +68,10 @@ lookup_opt() {
     while IFS= read -r LINE; do
         CUR_NAME=$(echo "$LINE" | cut -d: -f1 | trim_whitespace)
         CUR_CMD=$(echo "$LINE" | cut -d: -f2 | trim_whitespace)
-        [ "$OPT_NAME" == "$CUR_NAME" ] && echo "$CUR_CMD" && return 0
+        if [ "$OPT_NAME" == "$CUR_NAME" ]; then
+          echo "$CUR_CMD"
+          return 0
+        fi
     done <"$OPTS_FILE"
     return 1
 }
@@ -79,15 +84,15 @@ update_opts() {
     get_opts --no_recent >>"$TMP"
     local SUM=$(sha256sum "$TMP")
     "$EDITOR" "$TMP" '-c $'
-    [ "$SUM" == "$(sha256sum $TMP)" ] && return 0
+    if [ "$SUM" == "$(sha256sum $TMP)" ]; then return 0; fi
     mv "$OPTS_FILE" "$OPTS_FILE_BACKUP"
     touch "$OPTS_FILE"
     while IFS= read LINE; do
-        [[ "$LINE" =~ ^'#' ]] && continue
+        if [[ "$LINE" =~ ^'#' ]]; then continue; fi
         NAME=$(echo $LINE | cut -d':' -f1 | trim_whitespace)
         CMD=$(echo $LINE | cut -d':' -f2 | trim_whitespace)
-        [ -z "$NAME" ] && continue
-        [ -z "$CMD" ] && CMD="$NAME"
+        if [ -z "$NAME" ]; then continue; fi
+        if [ -z "$CMD" ]; then CMD="$NAME"; fi
         printf "%s: %s\n" "$NAME" "$CMD" >>"$OPTS_FILE"
     done <"$TMP"
     reset_recents --force
@@ -148,8 +153,9 @@ config_mode() {
 }
 
 launch() {
+  echo "$@"
     nohup $@ >/dev/null 2>&1 &
-    sleep 0.001 # Give the process time to get a new pgid
+    sleep 0.01 # Give the process time to get a new pgid
 }
 launcher_mode() {
     local ID="$ID"
@@ -160,9 +166,15 @@ launcher_mode() {
             --prompt "$LAUNCH_PROMPT" \
             --opts "$LAUNCHER_NAMES"
     )
-    [ -z "$OPT_NAME" ] && return 1
+    if [ -z "$OPT_NAME" ]; then
+      echo "Nothing chosen."
+      return 1
+    fi
     local OPT="$(lookup_opt "$OPT_NAME")"
-    [ -z "$OPT" ] && return 1
+    if [ -z "$OPT" ]; then
+      echo "Invalid option: $OPT_NAME"
+      return 1
+    fi
     update_recents "$OPT_NAME" "$OPT"
     launch "$OPT"
 }
@@ -172,6 +184,7 @@ CONFIG)
     config_mode
     ;;
 LAUNCH)
+    echo "launcher_mode"
     launcher_mode
     ;;
 esac
