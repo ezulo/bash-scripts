@@ -21,6 +21,7 @@ __term_close_all() {
 
 __term_spawn() {
     __term_close_all
+    local WINDOW_TITLE=""
     local WINDOW_CLASS="${ID:-"${_ID}"}"
     local WINDOW_WIDTH="$DEFAULT_WINDOW_WIDTH"
     local WINDOW_HEIGHT="$DEFAULT_WINDOW_HEIGHT"
@@ -34,12 +35,14 @@ __term_spawn() {
         '--width='*) WINDOW_WIDTH=$(cut -d '=' -f2 <<<"$1") ;;
         '--height='*) WINDOW_HEIGHT=$(cut -d '=' -f2 <<<"$1") ;;
         '--class='*) WINDOW_CLASS=$(cut -d '=' -f2 <<<"$1") ;;
+        '--title='*) WINDOW_TITLE=$(cut -d '=' -f2 <<<"$1") ;;
         '--size='*) WINDOW_CLASS="$ID-$(cut -d '=' -f2 <<<"$1")" ;;
         '--no-output') NO_OUTPUT=1 ;;
         *) TERM_FLAGS+=("$1") ;;
         esac
         shift
     done
+    WINDOW_TITLE=${WINDOW_TITLE:-"$@"}
     # Currently, these are set for kitty
     TERM_FLAGS+=(
         "--override=map Ctrl+Esc close"
@@ -48,11 +51,11 @@ __term_spawn() {
         "--override=initial_window_height $WINDOW_HEIGHT"
     )
     if [ -z "$NO_OUTPUT" ]; then
-        "$TERM" --class $WINDOW_CLASS "${TERM_FLAGS[@]}" /bin/bash -c \
+        "$TERM" --title "$WINDOW_TITLE" --class $WINDOW_CLASS "${TERM_FLAGS[@]}" /bin/bash -c \
             "$@ >$FIFO" >/dev/null 2>&1 &
         cat "$FIFO"
     else
-        "$TERM" --class $WINDOW_CLASS "${TERM_FLAGS[@]}" /bin/bash -c \
+        "$TERM" --title "$WINDOW_TITLE" --class $WINDOW_CLASS "${TERM_FLAGS[@]}" /bin/bash -c \
             "$@" >/dev/null 2>&1
     fi
 }
