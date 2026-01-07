@@ -36,4 +36,4 @@ if [[ "$NOTE" == "$CREATE_NEW" ]]; then
     NOTE="$(md_extension "$FILENAME")"
 fi
 
-kitty --detach -d "$NOTES_DIR" /bin/bash -c "$EDITOR $NOTE"
+kitty --class "$EDITOR" --title "$EDITOR $NOTE" --detach -d "$NOTES_DIR" /bin/bash -c "$EDITOR $NOTE"
