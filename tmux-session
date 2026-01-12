@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+# Launches a tmux-session with a custom name
+# If the session already exists, will launch that
+# Useful for "caching" sessions without having to restart them every time.
+
+# Since this is mostly for pop up menus and such, we open a different tmux socket
+# with stripped down options (no tmux keybinds and no status bar)
+
+
+### Flags ###
+#
+# Set the session name
+# (-s SESSION_NAME)
+#
+# Set the session command (defaults to $SHELL)
+# [-c SESSION_CMD]
+#
+# Set tmux options (via `tmux set-option`)
+# [-o TMUX_OPTION]
+#
+# Set the mode
+# menu: no statusline or keybinds (for menus)
+# full: statusline and keybinds (for fully interactive terminals)
+# [-m MODE]
+#
+#############
+
+set -e
+set -x
+
+# Arguments
+TMUX_SESSION=
+TMUX_COMMAND="$SHELL"
+
+# Options
+# Menu mode disables the
+TMUX_SOCKET="tmux-menu"
+TMUX_MODE=menu
+TMUX_OPTS=()
+
+usage() {
+  echo "tmux-session (-s SESSION_NAME) [-c SESSION_COMMAND] [-m menu|full] [-o TMUX_OPT]"
+}
+
+# Ingest options
+while [ ! -z "$1" ]; do
+  case "$1" in
+    '-s') shift && TMUX_SESSION="$1" ;;
+    '-c') shift && TMUX_CMD="$1" ;;
+    '-m') shift && TMUX_MODE="$1" ;;
+    '-o') shift && TMUX_OPTS+=("$1") ;;
+    *) echo "Unrecognized flag: $1" && usage && exit 1 ;;
+  esac
+  shift || :
+done
+
+# Validate
+if [ -z "$TMUX_SESSION" ]; then
+  echo "Session name must be provided."
+  usage
+  exit 1
+fi
+if [ -z "$TMUX_COMMAND" ]; then
+  echo "No session command passed."
+  usage
+  exit 1
+fi
+if [ ! -z "$TMUX" ]; then
+  echo "Nested tmux sessions are not allowed."
+  exit 1
+fi
+
+# Set tmux exec command based on mode
+TMUX_EXEC=
+if [ "$TMUX_MODE" == "menu" ]; then
+  TMUX_EXEC="tmux -L $TMUX_SOCKET"
+elif [ "$TMUX_MODE" == "full" ]; then
+  TMUX_EXEC="tmux"
+else
+  echo "Unrecognized mode: $TMUX_MODE"
+  usage
+  exit 1
+fi
+
+# Create session is it does not exist
+if ! $TMUX_EXEC has-session -t "$TMUX_SESSION" 2> /dev/null; then
+  $TMUX_EXEC new-session -d -s "$TMUX_SESSION" "$TMUX_COMMAND"
+  if [ "$TMUX_MODE" == "menu" ]; then
+    # These are redundant if there is an open session under that socket
+    # But, it's just easy to call it anyways
+    $TMUX_EXEC unbind-key -a
+    $TMUX_EXEC set-option -t "$TMUX_SESSION" status off
+  fi
+  for OPT in "${TMUX_OPTS[@]}"; do
+    $TMUX_EXEC set-option -t "$TMUX_SESSION" $OPT
+  done
+fi
+
+$TMUX_EXEC attach-session -t "$TMUX_SESSION"
+
