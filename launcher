@@ -184,7 +184,6 @@ CONFIG)
     config_mode
     ;;
 LAUNCH)
-    echo "launcher_mode"
     launcher_mode
     ;;
 esac
