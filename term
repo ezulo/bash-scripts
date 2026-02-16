@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+#
+# Fast terminal launcher using persistent kitty daemon.
+# Uses remote control for near-instant window spawning.
+#
+
+set -e
+
+SOCKET_DIR="/run/user/$(id -u)"
+SOCKET=""
+
+__find_socket() {
+    local sock
+    for sock in "$SOCKET_DIR"/kitty-terminal.sock-*; do
+        [[ -S "$sock" ]] && SOCKET="$sock" && return 0
+    done
+    return 1
+}
+
+__ensure_daemon() {
+    if __find_socket && kitten @ --to "unix:$SOCKET" ls >/dev/null 2>&1; then
+        return 0
+    fi
+    systemctl --user start kitty-terminal.service
+    for _ in {1..20}; do
+        if __find_socket && kitten @ --to "unix:$SOCKET" ls >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.05
+    done
+    echo "Failed to start kitty-terminal daemon" >&2
+    return 1
+}
+
+__ensure_daemon
+
+# Launch tmux in a new OS window (or custom command if provided)
+if [[ $# -eq 0 ]]; then
+    kitten @ --to "unix:$SOCKET" launch --type=os-window --os-window-class=kitty -- tmux
+else
+    kitten @ --to "unix:$SOCKET" launch --type=os-window --os-window-class=kitty -- "$@"
+fi
