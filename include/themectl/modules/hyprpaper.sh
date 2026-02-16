@@ -29,24 +29,22 @@ hyprpaper_theme() {
     for MONITOR in "${MONITORS[@]}"; do
         WALLPAPER=$(echo "$WALLPAPERS" | head -n $i | tail -n 1)
         echo "preload = $WALLPAPER" >>"$HYPRPAPER_CONFIG"
-        echo "wallpaper = $MONITOR, $WALLPAPER" >>"$HYPRPAPER_CONFIG"
+        echo "wallpaper {" >>"$HYPRPAPER_CONFIG"
+        echo "  monitor = $MONITOR" >>"$HYPRPAPER_CONFIG"
+        echo "  path = $WALLPAPER" >>"$HYPRPAPER_CONFIG"
+        echo "  fit_mode = cover" >>"$HYPRPAPER_CONFIG"
+        echo "}" >>"$HYPRPAPER_CONFIG"
         i=$(($i + 1))
     done
 }
 
 hyprpaper_reload() {
     local ID="$ID_HYPRPAPER:reload"
-    ! _is_active && return 0
     # Kill hyprpaper if there are no wallpapers
-    # Start hyprpaper if it isn't running
-    ! pgrep -f hyprpaper >/dev/null && hyprpaper >/dev/null 2>&1 &
-    MONITORS=($(_monitors))
-    i=1
-    for MONITOR in "${MONITORS[@]}"; do
-        WALLPAPER=$(echo "$WALLPAPERS" | head -n $i | tail -n 1)
-        hyprctl hyprpaper reload "$MONITOR","$WALLPAPER" &>/dev/null 2>&1
-        i=$(($i + 1))
-    done
+    killall -9 hyprpaper
+    if _is_active; then
+      hyprpaper &
+    fi
 }
 
 hyprpaper_clean() {
