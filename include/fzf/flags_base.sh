@@ -5,6 +5,8 @@
 # Ideally, you would overwrite these
 #
 source "$MY_DIR/include/util/themecolor.sh"
+COLOR_FG="${COLOR_FG:-$(c foreground)}"
+COLOR_BG="${COLOR_BG:-$(c background)}"
 COLOR_BORDER="${COLOR_BORDER:-$(c 15)}"
 COLOR_BORDER_LABEL="${COLOR_BORDER_LABEL:-$(c 15)}"
 COLOR_HEADER="${COLOR_HEADER:-$(c 15)}"
@@ -21,11 +23,12 @@ COLOR_HEADER_LABEL="${COLOR_HEADER_LABEL:-$(c 12)}"
 export FLAGS=(
     "--layout reverse"
     "--border --padding 1,2"
-    "--border-label '$BORDER_LABEL' " 
-    "--input-label '$INPUT_LABEL' " 
-    "--header-label '$HEADER_LABEL' " 
-    "--color border:$COLOR_BORDER,label:$COLOR_BORDER_LABEL" 
-    "--color list-border:$COLOR_LIST_BORDER,list-label:$COLOR_LIST_LABEL" 
-    "--color input-border:$COLOR_INPUT_BORDER,input-label:$COLOR_INPUT_LABEL" 
+    "--border-label '$BORDER_LABEL' "
+    "--input-label '$INPUT_LABEL' "
+    "--header-label '$HEADER_LABEL' "
+    "--color fg:$COLOR_FG,bg:$COLOR_BG"
+    "--color border:$COLOR_BORDER,label:$COLOR_BORDER_LABEL"
+    "--color list-border:$COLOR_LIST_BORDER,list-label:$COLOR_LIST_LABEL"
+    "--color input-border:$COLOR_INPUT_BORDER,input-label:$COLOR_INPUT_LABEL"
 )
 
