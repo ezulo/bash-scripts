@@ -58,7 +58,8 @@ kitty_reload() {
     ! command -v kitty > /dev/null &&
         log_trace "$ID" "kitty not found." && return 1
     kill -SIGUSR1 $(pgrep kitty) 2>/dev/null
-    # Restart floating-term daemon to ensure it picks up new theme
+    # Restart kitty daemons to ensure they pick up new theme
+    systemctl --user restart kitty-terminal.service 2>/dev/null || true
     systemctl --user restart kitty-floating.service 2>/dev/null || true
 }
 
