@@ -30,8 +30,8 @@ md_extension() { ! [[ "$1" =~ \.md$ ]] && echo "$1.md" || echo "$1"; }
 if [[ "$NOTE" == "$CREATE_NEW" ]]; then
     TIMESTAMP="$(date +"%Y-%m-%dT%H:%M:%S%z")"
     FILENAME_DEFAULT="$NOTES_DIR/$TIMESTAMP.md"
-    FILENAME="$NOTES_DIR/$(prompt -p "Enter a filename ( default: $TIMESTAMP.md )")"
-    [ -z "$FILENAME" ] && FILENAME="$FILENAME_DEFAULT"
+    FILENAME_INPUT="$(prompt -p "Enter a filename ( default: $TIMESTAMP.md )")"
+    [ -z "$FILENAME_INPUT" ] && FILENAME="$FILENAME_DEFAULT" || FILENAME="$NOTES_DIR/$FILENAME_INPUT"
     ! [[ "$FILENAME" =~ ^"$NOTES_DIR" ]] && exit 1
     NOTE="$(md_extension "$FILENAME")"
 fi
