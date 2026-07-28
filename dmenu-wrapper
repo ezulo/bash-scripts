@@ -2,6 +2,10 @@
 
 # dmenu wrapper with AwesomeWM powerarrow theme colors
 
+# Get focused screen from AwesomeWM (1-indexed) and convert to dmenu (0-indexed)
+MONITOR=$(awesome-client 'return require("awful").screen.focused().index' 2>/dev/null | grep -oP '\d+')
+MONITOR=$((MONITOR - 1))
+
 # Colors from ~/.config/awesome/themes/powerarrow/theme.lua
 NB="#222222"  # normal background (bg_normal)
 NF="#FEFEFE"  # normal foreground (fg_normal)
@@ -9,7 +13,7 @@ SB="#32D6FF"  # selected background (fg_focus - cyan accent)
 SF="#222222"  # selected foreground (dark text on cyan)
 FONT="JetBrains Mono:size=10"
 
-DMENU_ARGS=(-nb "$NB" -nf "$NF" -sb "$SB" -sf "$SF" -fn "$FONT" "$@")
+DMENU_ARGS=(-m "$MONITOR" -nb "$NB" -nf "$NF" -sb "$SB" -sf "$SF" -fn "$FONT" "$@")
 
 if [ -p /dev/stdin ]; then
     exec dmenu "${DMENU_ARGS[@]}"
